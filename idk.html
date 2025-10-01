@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Text Sharing System</title>
+    <title>Firebase Chat System</title>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <style>
         * {
             margin: 0;
@@ -11,253 +15,265 @@
             box-sizing: border-box;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        
+
         body {
             background: linear-gradient(135deg, #6e8efb, #a777e3);
-            color: #333;
-            min-height: 100vh;
-            padding: 20px;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
-        
+
         .container {
+            width: 90%;
             max-width: 800px;
-            margin: 0 auto;
-            background: white;
+            height: 90vh;
+            background-color: white;
             border-radius: 12px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
-        
-        header {
-            background: #4a6cf7;
+
+        .header {
+            background: linear-gradient(to right, #4a6ee0, #6e8efb);
             color: white;
-            padding: 25px;
-            text-align: center;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        
-        h1 {
-            font-size: 2.2rem;
-            margin-bottom: 10px;
-        }
-        
-        .subtitle {
-            font-size: 1.1rem;
-            opacity: 0.9;
-        }
-        
-        .main-content {
-            padding: 25px;
-        }
-        
-        .card {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 25px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-        }
-        
-        h2 {
-            color: #4a6cf7;
-            margin-bottom: 15px;
+
+        .header h1 {
             font-size: 1.5rem;
-        }
-        
-        .form-group {
-            margin-bottom: 20px;
-        }
-        
-        label {
-            display: block;
-            margin-bottom: 8px;
             font-weight: 600;
-            color: #555;
         }
-        
-        textarea, input {
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-info span {
+            font-weight: 500;
+        }
+
+        .auth-section {
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            gap: 20px;
+        }
+
+        .auth-form {
             width: 100%;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .auth-form h2 {
+            text-align: center;
+            margin-bottom: 10px;
+            color: #4a6ee0;
+        }
+
+        input {
             padding: 12px 15px;
             border: 1px solid #ddd;
             border-radius: 8px;
             font-size: 1rem;
             transition: border 0.3s;
         }
-        
-        textarea {
-            min-height: 150px;
-            resize: vertical;
-        }
-        
-        textarea:focus, input:focus {
+
+        input:focus {
             outline: none;
-            border-color: #4a6cf7;
-            box-shadow: 0 0 0 2px rgba(74, 108, 247, 0.2);
+            border-color: #6e8efb;
         }
-        
-        .btn {
-            background: #4a6cf7;
+
+        button {
+            padding: 12px 15px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(to right, #4a6ee0, #6e8efb);
+            color: white;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: transform 0.2s, opacity 0.2s;
+        }
+
+        button:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .auth-toggle {
+            background: transparent;
+            color: #4a6ee0;
+            text-decoration: underline;
+            padding: 5px;
+        }
+
+        .auth-toggle:hover {
+            background: transparent;
+            transform: none;
+        }
+
+        .chat-section {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .messages-container {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            max-width: 70%;
+            padding: 12px 15px;
+            border-radius: 18px;
+            position: relative;
+            word-wrap: break-word;
+        }
+
+        .message.sent {
+            align-self: flex-end;
+            background: linear-gradient(to right, #4a6ee0, #6e8efb);
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+
+        .message.received {
+            align-self: flex-start;
+            background-color: #f0f2f5;
+            color: #333;
+            border-bottom-left-radius: 5px;
+        }
+
+        .message-info {
+            font-size: 0.75rem;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+
+        .input-section {
+            padding: 15px;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 10px;
+        }
+
+        .message-input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 24px;
+            font-size: 1rem;
+        }
+
+        .send-button {
+            padding: 12px 20px;
+            border-radius: 24px;
+            background: linear-gradient(to right, #4a6ee0, #6e8efb);
             color: white;
             border: none;
-            padding: 12px 25px;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .btn:hover {
-            background: #3a5ce5;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-        
-        .btn i {
-            margin-right: 8px;
-        }
-        
-        .shared-texts {
-            margin-top: 30px;
-        }
-        
-        .text-item {
-            background: white;
-            border-radius: 8px;
-            padding: 18px;
-            margin-bottom: 15px;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
-            border-left: 4px solid #4a6cf7;
-        }
-        
-        .text-content {
-            margin-bottom: 10px;
-            line-height: 1.5;
-            color: #444;
-        }
-        
-        .text-meta {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.85rem;
-            color: #777;
-        }
-        
-        .empty-state {
-            text-align: center;
-            padding: 30px;
-            color: #777;
-        }
-        
-        .empty-state i {
-            font-size: 3rem;
-            margin-bottom: 15px;
-            color: #ccc;
-        }
-        
-        .loading {
-            text-align: center;
-            padding: 20px;
-            color: #4a6cf7;
-        }
-        
-        .notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px 20px;
-            border-radius: 8px;
-            color: white;
             font-weight: 500;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-            z-index: 1000;
-            transform: translateX(150%);
-            transition: transform 0.4s;
         }
-        
-        .notification.show {
-            transform: translateX(0);
-        }
-        
-        .notification.success {
-            background: #28a745;
-        }
-        
-        .notification.error {
-            background: #dc3545;
-        }
-        
-        footer {
-            text-align: center;
-            padding: 20px;
-            color: #777;
+
+        .logout-button {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 8px 15px;
+            border-radius: 20px;
             font-size: 0.9rem;
-            border-top: 1px solid #eee;
         }
-        
+
+        .error-message {
+            color: #e74c3c;
+            text-align: center;
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+
+        .welcome-message {
+            text-align: center;
+            color: #666;
+            margin: 20px 0;
+            font-style: italic;
+        }
+
         @media (max-width: 600px) {
             .container {
-                border-radius: 0;
+                width: 95%;
+                height: 95vh;
             }
             
-            header {
-                padding: 20px 15px;
-            }
-            
-            h1 {
-                font-size: 1.8rem;
-            }
-            
-            .main-content {
-                padding: 15px;
+            .message {
+                max-width: 85%;
             }
         }
     </style>
-    <!-- Include Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>Text Sharing System</h1>
-            <p class="subtitle">Share your text snippets with others instantly</p>
-        </header>
-        
-        <div class="main-content">
-            <div class="card">
-                <h2>Share New Text</h2>
-                <div class="form-group">
-                    <label for="textTitle">Title (optional)</label>
-                    <input type="text" id="textTitle" placeholder="Give your text a title...">
-                </div>
-                <div class="form-group">
-                    <label for="textContent">Your Text</label>
-                    <textarea id="textContent" placeholder="Type or paste your text here..."></textarea>
-                </div>
-                <button id="shareBtn" class="btn">
-                    <i>📤</i> Share Text
-                </button>
-            </div>
-            
-            <div class="shared-texts">
-                <h2>Shared Texts</h2>
-                <div id="textsList">
-                    <div class="loading">
-                        <i>⏳</i> Loading shared texts...
-                    </div>
-                </div>
+        <div class="header">
+            <h1>Firebase Chat</h1>
+            <div class="user-info" id="userInfo">
+                <span id="userEmail">Not logged in</span>
+                <button class="logout-button" id="logoutButton" style="display: none;">Logout</button>
             </div>
         </div>
         
-        <footer>
-            <p>Text Sharing System &copy; 2023 | Powered by Firebase</p>
-        </footer>
+        <!-- Authentication Section -->
+        <div class="auth-section" id="authSection">
+            <div class="auth-form" id="loginForm">
+                <h2>Login to Chat</h2>
+                <input type="email" id="loginEmail" placeholder="Email">
+                <input type="password" id="loginPassword" placeholder="Password">
+                <button id="loginButton">Login</button>
+                <div class="error-message" id="loginError"></div>
+                <button class="auth-toggle" id="showRegister">Don't have an account? Register</button>
+            </div>
+            
+            <div class="auth-form" id="registerForm" style="display: none;">
+                <h2>Create an Account</h2>
+                <input type="text" id="registerName" placeholder="Display Name">
+                <input type="email" id="registerEmail" placeholder="Email">
+                <input type="password" id="registerPassword" placeholder="Password">
+                <button id="registerButton">Register</button>
+                <div class="error-message" id="registerError"></div>
+                <button class="auth-toggle" id="showLogin">Already have an account? Login</button>
+            </div>
+        </div>
+        
+        <!-- Chat Section -->
+        <div class="chat-section" id="chatSection">
+            <div class="messages-container" id="messagesContainer">
+                <div class="welcome-message">Welcome to the chat! Start sending messages.</div>
+            </div>
+            <div class="input-section">
+                <input type="text" class="message-input" id="messageInput" placeholder="Type a message...">
+                <button class="send-button" id="sendButton">Send</button>
+            </div>
+        </div>
     </div>
-    
-    <div id="notification" class="notification"></div>
 
     <script>
         // Firebase configuration
@@ -273,117 +289,176 @@
 
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
         const db = firebase.firestore();
 
-        // DOM elements
-        const textTitle = document.getElementById('textTitle');
-        const textContent = document.getElementById('textContent');
-        const shareBtn = document.getElementById('shareBtn');
-        const textsList = document.getElementById('textsList');
-        const notification = document.getElementById('notification');
+        // DOM Elements
+        const authSection = document.getElementById('authSection');
+        const chatSection = document.getElementById('chatSection');
+        const loginForm = document.getElementById('loginForm');
+        const registerForm = document.getElementById('registerForm');
+        const showRegister = document.getElementById('showRegister');
+        const showLogin = document.getElementById('showLogin');
+        const loginButton = document.getElementById('loginButton');
+        const registerButton = document.getElementById('registerButton');
+        const logoutButton = document.getElementById('logoutButton');
+        const userEmail = document.getElementById('userEmail');
+        const loginError = document.getElementById('loginError');
+        const registerError = document.getElementById('registerError');
+        const messagesContainer = document.getElementById('messagesContainer');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
 
-        // Show notification
-        function showNotification(message, type = 'success') {
-            notification.textContent = message;
-            notification.className = `notification ${type}`;
-            notification.classList.add('show');
-            
-            setTimeout(() => {
-                notification.classList.remove('show');
-            }, 3000);
-        }
-
-        // Share text function
-        shareBtn.addEventListener('click', async () => {
-            const title = textTitle.value.trim();
-            const content = textContent.value.trim();
-            
-            if (!content) {
-                showNotification('Please enter some text to share', 'error');
-                return;
-            }
-            
-            try {
-                shareBtn.disabled = true;
-                shareBtn.innerHTML = '<i>⏳</i> Sharing...';
-                
-                // Add text to Firestore
-                await db.collection('sharedTexts').add({
-                    title: title || 'Untitled',
-                    content: content,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                
-                // Clear form
-                textTitle.value = '';
-                textContent.value = '';
-                
-                showNotification('Text shared successfully!');
-            } catch (error) {
-                console.error('Error sharing text: ', error);
-                showNotification('Failed to share text. Please try again.', 'error');
-            } finally {
-                shareBtn.disabled = false;
-                shareBtn.innerHTML = '<i>📤</i> Share Text';
+        // Auth state observer
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                // User is signed in
+                userEmail.textContent = user.email;
+                authSection.style.display = 'none';
+                chatSection.style.display = 'flex';
+                logoutButton.style.display = 'block';
+                loadMessages();
+            } else {
+                // User is signed out
+                userEmail.textContent = 'Not logged in';
+                authSection.style.display = 'flex';
+                chatSection.style.display = 'none';
+                logoutButton.style.display = 'none';
+                messagesContainer.innerHTML = '<div class="welcome-message">Welcome to the chat! Start sending messages.</div>';
             }
         });
 
-        // Load and display shared texts
-        function loadSharedTexts() {
-            textsList.innerHTML = '<div class="loading"><i>⏳</i> Loading shared texts...</div>';
+        // Event Listeners
+        showRegister.addEventListener('click', () => {
+            loginForm.style.display = 'none';
+            registerForm.style.display = 'flex';
+        });
+
+        showLogin.addEventListener('click', () => {
+            registerForm.style.display = 'none';
+            loginForm.style.display = 'flex';
+        });
+
+        loginButton.addEventListener('click', () => {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
             
-            db.collection('sharedTexts')
-                .orderBy('timestamp', 'desc')
+            loginError.textContent = '';
+            
+            auth.signInWithEmailAndPassword(email, password)
+                .catch(error => {
+                    loginError.textContent = error.message;
+                });
+        });
+
+        registerButton.addEventListener('click', () => {
+            const name = document.getElementById('registerName').value;
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+            
+            registerError.textContent = '';
+            
+            auth.createUserWithEmailAndPassword(email, password)
+                .then(userCredential => {
+                    // Update user profile with display name
+                    return userCredential.user.updateProfile({
+                        displayName: name
+                    });
+                })
+                .catch(error => {
+                    registerError.textContent = error.message;
+                });
+        });
+
+        logoutButton.addEventListener('click', () => {
+            auth.signOut();
+        });
+
+        sendButton.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', e => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Function to send a message
+        function sendMessage() {
+            const messageText = messageInput.value.trim();
+            if (messageText === '') return;
+            
+            const user = auth.currentUser;
+            if (!user) return;
+            
+            db.collection('messages').add({
+                text: messageText,
+                userId: user.uid,
+                userName: user.displayName || user.email.split('@')[0],
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            })
+            .then(() => {
+                messageInput.value = '';
+            })
+            .catch(error => {
+                console.error('Error sending message: ', error);
+            });
+        }
+
+        // Function to load and listen for messages
+        function loadMessages() {
+            db.collection('messages')
+                .orderBy('timestamp', 'asc')
                 .onSnapshot(snapshot => {
-                    if (snapshot.empty) {
-                        textsList.innerHTML = `
-                            <div class="empty-state">
-                                <i>📝</i>
-                                <h3>No texts shared yet</h3>
-                                <p>Be the first to share a text snippet!</p>
-                            </div>
-                        `;
-                        return;
+                    // Clear the welcome message if it exists
+                    if (messagesContainer.querySelector('.welcome-message')) {
+                        messagesContainer.innerHTML = '';
                     }
                     
-                    textsList.innerHTML = '';
-                    snapshot.forEach(doc => {
-                        const text = doc.data();
-                        const textItem = document.createElement('div');
-                        textItem.className = 'text-item';
-                        
-                        // Format timestamp
-                        const timestamp = text.timestamp ? 
-                            text.timestamp.toDate().toLocaleString() : 
-                            'Just now';
-                        
-                        textItem.innerHTML = `
-                            <h3>${text.title}</h3>
-                            <div class="text-content">${text.content}</div>
-                            <div class="text-meta">
-                                <span>Shared ${timestamp}</span>
-                                <span>ID: ${doc.id.substring(0, 8)}...</span>
-                            </div>
-                        `;
-                        
-                        textsList.appendChild(textItem);
+                    snapshot.docChanges().forEach(change => {
+                        if (change.type === 'added') {
+                            displayMessage(change.doc.data(), change.doc.id);
+                        }
                     });
-                }, error => {
-                    console.error('Error loading texts: ', error);
-                    textsList.innerHTML = `
-                        <div class="empty-state">
-                            <i>⚠️</i>
-                            <h3>Error loading texts</h3>
-                            <p>Please check your connection and try again.</p>
-                        </div>
-                    `;
+                    
+                    // Scroll to the bottom
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
                 });
         }
 
-        // Initialize the app
-        document.addEventListener('DOMContentLoaded', () => {
-            loadSharedTexts();
-        });
+        // Function to display a message
+        function displayMessage(message, messageId) {
+            const user = auth.currentUser;
+            const isSent = user && message.userId === user.uid;
+            
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message');
+            messageElement.classList.add(isSent ? 'sent' : 'received');
+            messageElement.id = messageId;
+            
+            const messageText = document.createElement('div');
+            messageText.textContent = message.text;
+            
+            const messageInfo = document.createElement('div');
+            messageInfo.classList.add('message-info');
+            
+            const userName = document.createElement('span');
+            userName.textContent = isSent ? 'You' : message.userName;
+            
+            const time = document.createElement('span');
+            if (message.timestamp) {
+                time.textContent = new Date(message.timestamp.toDate()).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            } else {
+                time.textContent = 'Just now';
+            }
+            
+            messageInfo.appendChild(userName);
+            messageInfo.appendChild(document.createTextNode(' • '));
+            messageInfo.appendChild(time);
+            
+            messageElement.appendChild(messageText);
+            messageElement.appendChild(messageInfo);
+            
+            messagesContainer.appendChild(messageElement);
+        }
     </script>
 </body>
 </html>
