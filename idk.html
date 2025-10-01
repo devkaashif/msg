@@ -325,7 +325,7 @@
         let userId = generateUserId();
         let roomsListener = null;
         let messagesListener = null;
-        let activeUsersListener = null;
+        let activeUsersListeners = {};
 
         // Set initial username
         usernameInput.value = currentUser;
@@ -365,13 +365,14 @@
                     roomItem.className = 'room-item';
                     roomItem.dataset.roomId = doc.id;
                     
-                    // Get active user count for this room
-                    getActiveUserCount(doc.id).then(count => {
-                        roomItem.innerHTML = `
-                            <span>${room.name}</span>
-                            <span class="user-count">${count}</span>
-                        `;
-                    });
+                    // Set initial user count
+                    roomItem.innerHTML = `
+                        <span>${room.name}</span>
+                        <span class="user-count">0</span>
+                    `;
+                    
+                    // Listen for active users changes for this room
+                    setupActiveUsersListener(doc.id, roomItem);
                     
                     roomItem.addEventListener('click', () => {
                         joinRoom(doc.id, room.name);
@@ -384,11 +385,24 @@
             });
         }
 
-        // Get active user count for a room
-        async function getActiveUserCount(roomId) {
-            const snapshot = await db.collection('rooms').doc(roomId)
-                .collection('activeUsers').get();
-            return snapshot.size;
+        // Set up listener for active users in a room
+        function setupActiveUsersListener(roomId, roomItem) {
+            // Remove existing listener if any
+            if (activeUsersListeners[roomId]) {
+                activeUsersListeners[roomId]();
+            }
+            
+            // Set up new listener
+            activeUsersListeners[roomId] = db.collection('rooms').doc(roomId)
+                .collection('activeUsers').onSnapshot(snapshot => {
+                    const userCount = snapshot.size;
+                    const countElement = roomItem.querySelector('.user-count');
+                    if (countElement) {
+                        countElement.textContent = userCount;
+                    }
+                }, error => {
+                    console.error("Error listening to active users:", error);
+                });
         }
 
         // Create a new room
@@ -436,7 +450,8 @@
             db.collection('rooms').doc(roomId).collection('activeUsers').doc(userId).set({
                 username: currentUser,
                 joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                userColor: userColor
+                userColor: userColor,
+                lastActive: firebase.firestore.FieldValue.serverTimestamp()
             }).catch(error => {
                 console.error("Error adding user to active users:", error);
             });
@@ -446,9 +461,6 @@
             
             // Add join message
             addSystemMessage(`${currentUser} joined the room`);
-            
-            // Update room user counts
-            updateAllRoomCounts();
         }
 
         // Leave a room
@@ -466,33 +478,17 @@
                 messagesListener();
             }
             
-            // Remove active users listener
-            if (activeUsersListener) {
-                activeUsersListener();
-            }
-            
             // Clear messages container
             messagesContainer.innerHTML = '<div class="empty-state"><p>Select a room to start chatting</p></div>';
             
-            // Update room user counts
-            updateAllRoomCounts();
-            
             // Add leave message
             addSystemMessage(`${currentUser} left the room`);
-        }
-
-        // Update all room user counts in the UI
-        function updateAllRoomCounts() {
-            document.querySelectorAll('.room-item').forEach(async (item) => {
-                const roomId = item.dataset.roomId;
-                if (roomId) {
-                    const count = await getActiveUserCount(roomId);
-                    const countElement = item.querySelector('.user-count');
-                    if (countElement) {
-                        countElement.textContent = count;
-                    }
-                }
-            });
+            
+            // Reset current room
+            currentRoom = null;
+            currentRoomName.textContent = 'Select a room to start chatting';
+            messageInput.disabled = true;
+            sendMessageBtn.disabled = true;
         }
 
         // Load messages for a room
@@ -507,10 +503,11 @@
                 .collection('messages')
                 .orderBy('timestamp', 'asc')
                 .onSnapshot(snapshot => {
-                    snapshot.docChanges().forEach(change => {
-                        if (change.type === 'added') {
-                            displayMessage(change.doc.data());
-                        }
+                    // Clear messages first
+                    messagesContainer.innerHTML = '';
+                    
+                    snapshot.forEach(doc => {
+                        displayMessage(doc.data());
                     });
                     
                     // Scroll to bottom
@@ -595,7 +592,8 @@
             // Update active user document if in a room
             if (currentRoom) {
                 db.collection('rooms').doc(currentRoom).collection('activeUsers').doc(userId).update({
-                    username: currentUser
+                    username: currentUser,
+                    lastActive: firebase.firestore.FieldValue.serverTimestamp()
                 }).catch(error => {
                     console.error("Error updating username:", error);
                 });
@@ -613,8 +611,42 @@
             return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         }
 
+        // Clean up inactive users (runs periodically)
+        function cleanupInactiveUsers() {
+            const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+            
+            db.collectionGroup('activeUsers')
+                .where('lastActive', '<', fiveMinutesAgo)
+                .get()
+                .then(snapshot => {
+                    snapshot.forEach(doc => {
+                        doc.ref.delete().catch(error => {
+                            console.error("Error deleting inactive user:", error);
+                        });
+                    });
+                })
+                .catch(error => {
+                    console.error("Error cleaning up inactive users:", error);
+                });
+        }
+
+        // Update last active timestamp periodically
+        function updateLastActive() {
+            if (currentRoom) {
+                db.collection('rooms').doc(currentRoom).collection('activeUsers').doc(userId).update({
+                    lastActive: firebase.firestore.FieldValue.serverTimestamp()
+                }).catch(error => {
+                    console.error("Error updating last active:", error);
+                });
+            }
+        }
+
         // Initialize the app
         loadRooms();
+
+        // Set up periodic tasks
+        setInterval(cleanupInactiveUsers, 60000); // Clean up every minute
+        setInterval(updateLastActive, 30000); // Update last active every 30 seconds
 
         // Handle page unload
         window.addEventListener('beforeunload', () => {
@@ -626,19 +658,18 @@
         // Handle page visibility change (tab switching)
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'hidden' && currentRoom) {
-                // User switched tabs or minimized window - remove from active users
-                db.collection('rooms').doc(currentRoom).collection('activeUsers').doc(userId).delete()
-                    .catch(error => {
-                        console.error("Error removing user from active users:", error);
-                    });
-            } else if (document.visibilityState === 'visible' && currentRoom) {
-                // User returned to the tab - add back to active users
-                db.collection('rooms').doc(currentRoom).collection('activeUsers').doc(userId).set({
-                    username: currentUser,
-                    joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    userColor: userColor
+                // User switched tabs or minimized window
+                db.collection('rooms').doc(currentRoom).collection('activeUsers').doc(userId).update({
+                    lastActive: firebase.firestore.FieldValue.serverTimestamp()
                 }).catch(error => {
-                    console.error("Error adding user to active users:", error);
+                    console.error("Error updating last active on hide:", error);
+                });
+            } else if (document.visibilityState === 'visible' && currentRoom) {
+                // User returned to the tab
+                db.collection('rooms').doc(currentRoom).collection('activeUsers').doc(userId).update({
+                    lastActive: firebase.firestore.FieldValue.serverTimestamp()
+                }).catch(error => {
+                    console.error("Error updating last active on show:", error);
                 });
             }
         });
