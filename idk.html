@@ -361,28 +361,33 @@
                 
                 snapshot.forEach(doc => {
                     const room = doc.data();
-                    const roomItem = document.createElement('li');
-                    roomItem.className = 'room-item';
-                    roomItem.dataset.roomId = doc.id;
-                    
-                    // Set initial user count
-                    roomItem.innerHTML = `
-                        <span>${room.name}</span>
-                        <span class="user-count">0</span>
-                    `;
-                    
-                    // Listen for active users changes for this room
-                    setupActiveUsersListener(doc.id, roomItem);
-                    
-                    roomItem.addEventListener('click', () => {
-                        joinRoom(doc.id, room.name);
-                    });
-                    
+                    const roomItem = createRoomElement(doc.id, room.name);
                     roomList.appendChild(roomItem);
+                    
+                    // Set up active users listener for this room
+                    setupActiveUsersListener(doc.id, roomItem);
                 });
             }, error => {
                 console.error("Error loading rooms:", error);
             });
+        }
+
+        // Create a room element
+        function createRoomElement(roomId, roomName) {
+            const roomItem = document.createElement('li');
+            roomItem.className = 'room-item';
+            roomItem.dataset.roomId = roomId;
+            
+            roomItem.innerHTML = `
+                <span>${roomName}</span>
+                <span class="user-count">0</span>
+            `;
+            
+            roomItem.addEventListener('click', () => {
+                joinRoom(roomId, roomName);
+            });
+            
+            return roomItem;
         }
 
         // Set up listener for active users in a room
@@ -616,7 +621,7 @@
             const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
             
             db.collectionGroup('activeUsers')
-                .where('lastActive', '<', fiveMinutesAgo)
+                .where('lastActive', '<', firebase.firestore.Timestamp.fromDate(fiveMinutesAgo))
                 .get()
                 .then(snapshot => {
                     snapshot.forEach(doc => {
