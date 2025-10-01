@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Firebase Chat System</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>Live Art Sharing</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
     <style>
         * {
             margin: 0;
@@ -14,523 +16,671 @@
         }
 
         body {
-            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: #333;
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
         }
 
         .container {
-            width: 90%;
-            max-width: 1000px;
-            height: 90vh;
-            background-color: white;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            overflow: hidden;
-            display: flex;
+            max-width: 1200px;
+            margin: 0 auto;
         }
 
-        /* Login Form Styles */
-        .login-container {
-            width: 100%;
-            padding: 40px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
-            color: white;
+        header {
             text-align: center;
-        }
-
-        .login-container h1 {
-            margin-bottom: 10px;
-            font-size: 2.5rem;
-        }
-
-        .login-container p {
+            padding: 20px 0;
             margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
             opacity: 0.9;
         }
 
-        .login-form {
-            width: 100%;
-            max-width: 400px;
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
         }
 
-        .form-group {
+        .room-section, .art-section {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+            padding-bottom: 10px;
+        }
+
+        .room-controls {
+            display: flex;
+            gap: 10px;
             margin-bottom: 20px;
-            text-align: left;
+            flex-wrap: wrap;
         }
 
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-        }
-
-        .form-group input {
-            width: 100%;
+        input, button {
             padding: 12px 15px;
             border: none;
-            border-radius: 10px;
-            background-color: rgba(255, 255, 255, 0.9);
-            font-size: 16px;
+            border-radius: 8px;
+            font-size: 1rem;
         }
 
-        .btn {
-            padding: 12px 25px;
-            border: none;
-            border-radius: 10px;
-            background-color: #ff6b6b;
+        input {
+            flex-grow: 1;
+            background: rgba(255, 255, 255, 0.2);
             color: white;
-            font-size: 16px;
-            font-weight: 600;
+            min-width: 200px;
+        }
+
+        input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        button {
+            background: #ff6b6b;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #ff5252;
+            transform: translateY(-2px);
+        }
+
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .room-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .room-card {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            padding: 15px;
             cursor: pointer;
             transition: all 0.3s ease;
         }
 
-        .btn:hover {
-            background-color: #ff5252;
-            transform: translateY(-2px);
+        .room-card:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-5px);
         }
 
-        .btn-login {
-            width: 100%;
-            margin-top: 10px;
+        .room-name {
+            font-weight: bold;
+            margin-bottom: 5px;
         }
 
-        .toggle-form {
-            margin-top: 20px;
-            font-size: 14px;
+        .room-info {
+            font-size: 0.9rem;
+            opacity: 0.8;
         }
 
-        .toggle-form a {
-            color: #ffeb3b;
-            text-decoration: none;
-            font-weight: 500;
-        }
-
-        /* Chat Container Styles */
-        .chat-container {
-            display: none;
-            width: 100%;
+        .art-canvas-container {
+            display: flex;
             flex-direction: column;
+            align-items: center;
+            gap: 20px;
         }
 
-        .chat-header {
-            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
-            color: white;
-            padding: 20px;
+        canvas {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            cursor: crosshair;
+        }
+
+        .tools {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .tool-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .tool-btn.active {
+            background: #ff6b6b;
+        }
+
+        .color-picker {
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 50%;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .art-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .art-item {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .art-item:hover {
+            transform: scale(1.05);
+        }
+
+        .art-item img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+        }
+
+        .art-info {
+            padding: 10px;
+            font-size: 0.9rem;
+        }
+
+        .current-room {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 10px;
+        .leave-room {
+            background: #dc3545;
+            padding: 8px 12px;
+            font-size: 0.9rem;
         }
 
-        .user-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background-color: #ff6b6b;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-weight: bold;
-        }
-
-        .logout-btn {
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #28a745;
             color: white;
-            padding: 8px 15px;
-            border-radius: 20px;
-            cursor: pointer;
-            transition: all 0.3s ease;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            transform: translateX(150%);
+            transition: transform 0.3s ease;
+            z-index: 1000;
         }
 
-        .logout-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
+        .notification.show {
+            transform: translateX(0);
         }
 
-        .chat-messages {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-            background-color: #f8f9fa;
-        }
-
-        .message {
-            margin-bottom: 15px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .message-sender {
-            font-weight: bold;
-            margin-bottom: 5px;
-            font-size: 14px;
-        }
-
-        .message-content {
-            padding: 12px 15px;
-            border-radius: 18px;
-            max-width: 70%;
-            word-wrap: break-word;
-        }
-
-        .message.own {
-            align-items: flex-end;
-        }
-
-        .message.own .message-content {
-            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
-            color: white;
-        }
-
-        .message.other .message-content {
-            background-color: #e9ecef;
-            color: #333;
-        }
-
-        .message-time {
-            font-size: 12px;
-            color: #6c757d;
-            margin-top: 5px;
-        }
-
-        .chat-input {
-            padding: 20px;
-            background-color: white;
-            border-top: 1px solid #e9ecef;
-            display: flex;
-            gap: 10px;
-        }
-
-        .message-input {
-            flex: 1;
-            padding: 12px 15px;
-            border: 1px solid #e9ecef;
-            border-radius: 20px;
-            font-size: 16px;
-            outline: none;
-        }
-
-        .message-input:focus {
-            border-color: #6a11cb;
-        }
-
-        .send-btn {
-            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .send-btn:hover {
-            transform: scale(1.05);
-        }
-
-        /* Responsive Design */
         @media (max-width: 768px) {
-            .container {
-                width: 95%;
-                height: 95vh;
+            .room-controls {
+                flex-direction: column;
             }
             
-            .message-content {
-                max-width: 85%;
+            input, button {
+                width: 100%;
             }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Login/Signup Form -->
-        <div class="login-container" id="loginContainer">
-            <h1>Firebase Chat</h1>
-            <p>Connect with friends in real-time</p>
-            
-            <div class="login-form" id="loginForm">
-                <h2>Welcome Back!</h2>
-                <div class="form-group">
-                    <label for="loginEmail">Email</label>
-                    <input type="email" id="loginEmail" placeholder="Enter your email">
+        <header>
+            <h1>Live Art Sharing</h1>
+            <p class="subtitle">Create, share, and collaborate in real-time - no sign up required!</p>
+        </header>
+
+        <div class="main-content">
+            <section class="room-section">
+                <h2 class="section-title">Rooms</h2>
+                <div class="room-controls">
+                    <input type="text" id="roomNameInput" placeholder="Enter room name">
+                    <button id="createRoomBtn">Create Room</button>
+                    <button id="joinRoomBtn">Join Room</button>
                 </div>
-                <div class="form-group">
-                    <label for="loginPassword">Password</label>
-                    <input type="password" id="loginPassword" placeholder="Enter your password">
+                
+                <div id="currentRoomInfo" class="current-room" style="display: none;">
+                    <span>Current Room: <strong id="currentRoomName"></strong></span>
+                    <button id="leaveRoomBtn" class="leave-room">Leave Room</button>
                 </div>
-                <button class="btn btn-login" id="loginBtn">Sign In</button>
-                <div class="toggle-form">
-                    Don't have an account? <a href="#" id="showSignup">Sign Up</a>
+                
+                <div class="room-list" id="roomList">
+                    <!-- Rooms will be populated here -->
                 </div>
-            </div>
-            
-            <div class="login-form" id="signupForm" style="display: none;">
-                <h2>Create Account</h2>
-                <div class="form-group">
-                    <label for="signupName">Full Name</label>
-                    <input type="text" id="signupName" placeholder="Enter your full name">
-                </div>
-                <div class="form-group">
-                    <label for="signupEmail">Email</label>
-                    <input type="email" id="signupEmail" placeholder="Enter your email">
-                </div>
-                <div class="form-group">
-                    <label for="signupPassword">Password</label>
-                    <input type="password" id="signupPassword" placeholder="Create a password">
-                </div>
-                <button class="btn btn-login" id="signupBtn">Sign Up</button>
-                <div class="toggle-form">
-                    Already have an account? <a href="#" id="showLogin">Sign In</a>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Chat Interface -->
-        <div class="chat-container" id="chatContainer">
-            <div class="chat-header">
-                <div class="user-info">
-                    <div class="user-avatar" id="userAvatar">U</div>
-                    <div>
-                        <div id="userName">User Name</div>
-                        <div style="font-size: 12px;">Online</div>
+            </section>
+
+            <section class="art-section">
+                <h2 class="section-title">Create Art</h2>
+                <div class="art-canvas-container">
+                    <canvas id="artCanvas" width="800" height="500"></canvas>
+                    <div class="tools">
+                        <div class="tool-btn active" data-tool="pencil">✏️</div>
+                        <div class="tool-btn" data-tool="eraser">🧽</div>
+                        <input type="color" id="colorPicker" class="color-picker" value="#000000">
+                        <button id="clearCanvasBtn">Clear</button>
+                        <button id="saveArtBtn">Save Art</button>
                     </div>
                 </div>
-                <button class="logout-btn" id="logoutBtn">
-                    <i class="fas fa-sign-out-alt"></i> Logout
-                </button>
-            </div>
-            
-            <div class="chat-messages" id="chatMessages">
-                <!-- Messages will be displayed here -->
-                <div class="message other">
-                    <div class="message-sender">System</div>
-                    <div class="message-content">Welcome to Firebase Chat! Start a conversation.</div>
-                    <div class="message-time">Just now</div>
+                
+                <h2 class="section-title" style="margin-top: 30px;">Gallery</h2>
+                <div class="art-gallery" id="artGallery">
+                    <!-- Artworks will be displayed here -->
                 </div>
-            </div>
-            
-            <div class="chat-input">
-                <input type="text" class="message-input" id="messageInput" placeholder="Type a message...">
-                <button class="send-btn" id="sendBtn">
-                    <i class="fas fa-paper-plane"></i>
-                </button>
-            </div>
+            </section>
         </div>
     </div>
 
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-    
+    <div class="notification" id="notification"></div>
+
     <script>
         // Firebase configuration
         const firebaseConfig = {
-            apiKey: "AIzaSyBveyQ9XjWNvSCmQ_I2CO8lq9PqK8fAN60",
-            authDomain: "lol1-e2fb6.firebaseapp.com",
-            projectId: "lol1-e2fb6",
-            storageBucket: "lol1-e2fb6.firebasestorage.app",
-            messagingSenderId: "513142281561",
-            appId: "1:513142281561:web:6bdfadefa5391d3735e848",
-            measurementId: "G-PDL56MJLDT"
+            apiKey: "AIzaSyD0T-mS__FlN3QASJnmD0K6S5VNDiN2bxQ",
+            authDomain: "poplol-7209f.firebaseapp.com",
+            projectId: "poplol-7209f",
+            storageBucket: "poplol-7209f.firebasestorage.app",
+            messagingSenderId: "1058108342269",
+            appId: "1:1058108342269:web:577700a7503b3db8316394",
+            measurementId: "G-EXR6CPBH5R"
         };
 
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
         const db = firebase.firestore();
+        const storage = firebase.storage();
 
-        // DOM Elements
-        const loginContainer = document.getElementById('loginContainer');
-        const chatContainer = document.getElementById('chatContainer');
-        const loginForm = document.getElementById('loginForm');
-        const signupForm = document.getElementById('signupForm');
-        const showSignup = document.getElementById('showSignup');
-        const showLogin = document.getElementById('showLogin');
-        const loginBtn = document.getElementById('loginBtn');
-        const signupBtn = document.getElementById('signupBtn');
-        const logoutBtn = document.getElementById('logoutBtn');
-        const chatMessages = document.getElementById('chatMessages');
-        const messageInput = document.getElementById('messageInput');
-        const sendBtn = document.getElementById('sendBtn');
-        const userName = document.getElementById('userName');
-        const userAvatar = document.getElementById('userAvatar');
+        // DOM elements
+        const roomNameInput = document.getElementById('roomNameInput');
+        const createRoomBtn = document.getElementById('createRoomBtn');
+        const joinRoomBtn = document.getElementById('joinRoomBtn');
+        const leaveRoomBtn = document.getElementById('leaveRoomBtn');
+        const currentRoomInfo = document.getElementById('currentRoomInfo');
+        const currentRoomName = document.getElementById('currentRoomName');
+        const roomList = document.getElementById('roomList');
+        const artCanvas = document.getElementById('artCanvas');
+        const clearCanvasBtn = document.getElementById('clearCanvasBtn');
+        const saveArtBtn = document.getElementById('saveArtBtn');
+        const colorPicker = document.getElementById('colorPicker');
+        const toolButtons = document.querySelectorAll('.tool-btn');
+        const artGallery = document.getElementById('artGallery');
+        const notification = document.getElementById('notification');
 
-        // Toggle between login and signup forms
-        showSignup.addEventListener('click', (e) => {
-            e.preventDefault();
-            loginForm.style.display = 'none';
-            signupForm.style.display = 'block';
-        });
+        // Canvas context
+        const ctx = artCanvas.getContext('2d');
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        ctx.lineWidth = 5;
 
-        showLogin.addEventListener('click', (e) => {
-            e.preventDefault();
-            signupForm.style.display = 'none';
-            loginForm.style.display = 'block';
-        });
+        // App state
+        let currentRoom = null;
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+        let currentTool = 'pencil';
+        let currentColor = '#000000';
 
-        // Sign up function
-        signupBtn.addEventListener('click', () => {
-            const name = document.getElementById('signupName').value;
-            const email = document.getElementById('signupEmail').value;
-            const password = document.getElementById('signupPassword').value;
-
-            auth.createUserWithEmailAndPassword(email, password)
-                .then((userCredential) => {
-                    // User signed up successfully
-                    const user = userCredential.user;
-                    // Save user data to Firestore
-                    return db.collection('users').doc(user.uid).set({
-                        name: name,
-                        email: email,
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                })
-                .then(() => {
-                    console.log('User data saved successfully');
-                })
-                .catch((error) => {
-                    console.error('Error signing up:', error);
-                    alert('Error: ' + error.message);
-                });
-        });
-
-        // Login function
-        loginBtn.addEventListener('click', () => {
-            const email = document.getElementById('loginEmail').value;
-            const password = document.getElementById('loginPassword').value;
-
-            auth.signInWithEmailAndPassword(email, password)
-                .then((userCredential) => {
-                    // User logged in successfully
-                    console.log('User logged in:', userCredential.user);
-                })
-                .catch((error) => {
-                    console.error('Error logging in:', error);
-                    alert('Error: ' + error.message);
-                });
-        });
-
-        // Logout function
-        logoutBtn.addEventListener('click', () => {
-            auth.signOut()
-                .then(() => {
-                    console.log('User signed out');
-                })
-                .catch((error) => {
-                    console.error('Error signing out:', error);
-                });
-        });
-
-        // Send message function
-        sendBtn.addEventListener('click', sendMessage);
-        messageInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                sendMessage();
-            }
-        });
-
-        function sendMessage() {
-            const message = messageInput.value.trim();
-            if (message === '') return;
-
-            const user = auth.currentUser;
-            if (user) {
-                db.collection('messages').add({
-                    text: message,
-                    sender: user.uid,
-                    senderName: user.displayName || 'Anonymous',
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                })
-                .then(() => {
-                    messageInput.value = '';
-                })
-                .catch((error) => {
-                    console.error('Error sending message:', error);
-                });
-            }
+        // Initialize
+        function init() {
+            loadRooms();
+            setupCanvas();
+            setupEventListeners();
         }
 
-        // Display messages in real-time
-        function displayMessages() {
-            db.collection('messages')
-                .orderBy('timestamp', 'asc')
-                .onSnapshot((snapshot) => {
-                    chatMessages.innerHTML = '';
-                    snapshot.forEach((doc) => {
-                        const message = doc.data();
-                        const messageElement = document.createElement('div');
-                        messageElement.classList.add('message');
-                        
-                        const isOwnMessage = auth.currentUser && message.sender === auth.currentUser.uid;
-                        messageElement.classList.add(isOwnMessage ? 'own' : 'other');
-                        
-                        const senderName = message.senderName || 'Anonymous';
-                        const timestamp = message.timestamp ? message.timestamp.toDate().toLocaleTimeString() : 'Just now';
-                        
-                        messageElement.innerHTML = `
-                            <div class="message-sender">${isOwnMessage ? 'You' : senderName}</div>
-                            <div class="message-content">${message.text}</div>
-                            <div class="message-time">${timestamp}</div>
-                        `;
-                        
-                        chatMessages.appendChild(messageElement);
+        // Set up event listeners
+        function setupEventListeners() {
+            createRoomBtn.addEventListener('click', createRoom);
+            joinRoomBtn.addEventListener('click', joinRoom);
+            leaveRoomBtn.addEventListener('click', leaveRoom);
+            clearCanvasBtn.addEventListener('click', clearCanvas);
+            saveArtBtn.addEventListener('click', saveArt);
+            colorPicker.addEventListener('change', (e) => {
+                currentColor = e.target.value;
+            });
+
+            // Tool selection
+            toolButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    toolButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    currentTool = button.dataset.tool;
+                });
+            });
+
+            // Canvas events
+            artCanvas.addEventListener('mousedown', startDrawing);
+            artCanvas.addEventListener('mousemove', draw);
+            artCanvas.addEventListener('mouseup', stopDrawing);
+            artCanvas.addEventListener('mouseout', stopDrawing);
+
+            // Touch events for mobile
+            artCanvas.addEventListener('touchstart', handleTouchStart);
+            artCanvas.addEventListener('touchmove', handleTouchMove);
+            artCanvas.addEventListener('touchend', stopDrawing);
+        }
+
+        // Setup canvas
+        function setupCanvas() {
+            // Set initial canvas background
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, artCanvas.width, artCanvas.height);
+        }
+
+        // Drawing functions
+        function startDrawing(e) {
+            isDrawing = true;
+            [lastX, lastY] = getCoordinates(e);
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            
+            const [x, y] = getCoordinates(e);
+            
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(x, y);
+            
+            if (currentTool === 'pencil') {
+                ctx.strokeStyle = currentColor;
+                ctx.stroke();
+            } else if (currentTool === 'eraser') {
+                ctx.strokeStyle = 'white';
+                ctx.stroke();
+            }
+            
+            [lastX, lastY] = [x, y];
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+        }
+
+        function getCoordinates(e) {
+            let x, y;
+            
+            if (e.type.includes('touch')) {
+                x = e.touches[0].clientX - artCanvas.getBoundingClientRect().left;
+                y = e.touches[0].clientY - artCanvas.getBoundingClientRect().top;
+            } else {
+                x = e.offsetX;
+                y = e.offsetY;
+            }
+            
+            return [x, y];
+        }
+
+        function handleTouchStart(e) {
+            e.preventDefault();
+            startDrawing(e);
+        }
+
+        function handleTouchMove(e) {
+            e.preventDefault();
+            draw(e);
+        }
+
+        function clearCanvas() {
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, artCanvas.width, artCanvas.height);
+        }
+
+        // Room management
+        function createRoom() {
+            const roomName = roomNameInput.value.trim();
+            if (!roomName) {
+                showNotification('Please enter a room name');
+                return;
+            }
+
+            // Generate a random user ID for this session
+            const userId = 'user_' + Math.random().toString(36).substr(2, 9);
+            
+            db.collection('rooms').add({
+                name: roomName,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                createdBy: userId,
+                userCount: 1
+            })
+            .then((docRef) => {
+                currentRoom = {
+                    id: docRef.id,
+                    name: roomName
+                };
+                updateRoomUI();
+                showNotification(`Room "${roomName}" created successfully!`);
+                roomNameInput.value = '';
+                
+                // Listen for art updates in this room
+                listenForArtUpdates();
+            })
+            .catch((error) => {
+                console.error('Error creating room: ', error);
+                showNotification('Error creating room. Please try again.');
+            });
+        }
+
+        function joinRoom() {
+            const roomName = roomNameInput.value.trim();
+            if (!roomName) {
+                showNotification('Please enter a room name');
+                return;
+            }
+
+            db.collection('rooms')
+                .where('name', '==', roomName)
+                .get()
+                .then((querySnapshot) => {
+                    if (querySnapshot.empty) {
+                        showNotification('Room not found');
+                        return;
+                    }
+
+                    const roomDoc = querySnapshot.docs[0];
+                    currentRoom = {
+                        id: roomDoc.id,
+                        name: roomDoc.data().name
+                    };
+                    
+                    // Update user count
+                    db.collection('rooms').doc(roomDoc.id).update({
+                        userCount: firebase.firestore.FieldValue.increment(1)
                     });
                     
-                    // Scroll to the bottom of the chat
-                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                    updateRoomUI();
+                    showNotification(`Joined room "${roomName}"!`);
+                    roomNameInput.value = '';
+                    
+                    // Listen for art updates in this room
+                    listenForArtUpdates();
+                    loadRoomArt();
+                })
+                .catch((error) => {
+                    console.error('Error joining room: ', error);
+                    showNotification('Error joining room. Please try again.');
                 });
         }
 
-        // Auth state observer
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                // User is signed in
-                loginContainer.style.display = 'none';
-                chatContainer.style.display = 'flex';
-                
-                // Get user data from Firestore
-                db.collection('users').doc(user.uid).get()
-                    .then((doc) => {
-                        if (doc.exists) {
-                            const userData = doc.data();
-                            userName.textContent = userData.name;
-                            userAvatar.textContent = userData.name.charAt(0).toUpperCase();
-                        } else {
-                            userName.textContent = user.email;
-                            userAvatar.textContent = user.email.charAt(0).toUpperCase();
-                        }
-                    })
-                    .catch((error) => {
-                        console.error('Error getting user data:', error);
+        function leaveRoom() {
+            if (!currentRoom) return;
+            
+            // Decrement user count
+            db.collection('rooms').doc(currentRoom.id).update({
+                userCount: firebase.firestore.FieldValue.increment(-1)
+            });
+            
+            currentRoom = null;
+            updateRoomUI();
+            showNotification('Left the room');
+            
+            // Clear the gallery when leaving a room
+            artGallery.innerHTML = '';
+        }
+
+        function loadRooms() {
+            db.collection('rooms')
+                .orderBy('createdAt', 'desc')
+                .onSnapshot((querySnapshot) => {
+                    roomList.innerHTML = '';
+                    
+                    querySnapshot.forEach((doc) => {
+                        const room = doc.data();
+                        const roomCard = document.createElement('div');
+                        roomCard.className = 'room-card';
+                        roomCard.innerHTML = `
+                            <div class="room-name">${room.name}</div>
+                            <div class="room-info">Users: ${room.userCount || 0}</div>
+                        `;
+                        
+                        roomCard.addEventListener('click', () => {
+                            roomNameInput.value = room.name;
+                            joinRoom();
+                        });
+                        
+                        roomList.appendChild(roomCard);
                     });
-                
-                // Display messages
-                displayMessages();
+                });
+        }
+
+        function updateRoomUI() {
+            if (currentRoom) {
+                currentRoomName.textContent = currentRoom.name;
+                currentRoomInfo.style.display = 'flex';
             } else {
-                // User is signed out
-                loginContainer.style.display = 'flex';
-                chatContainer.style.display = 'none';
+                currentRoomInfo.style.display = 'none';
             }
-        });
+        }
+
+        // Art management
+        function saveArt() {
+            if (!currentRoom) {
+                showNotification('Please join a room first');
+                return;
+            }
+
+            // Generate a random user ID for this session if not already set
+            const userId = localStorage.getItem('userId') || 'user_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('userId', userId);
+            
+            // Convert canvas to data URL
+            const dataURL = artCanvas.toDataURL('image/png');
+            
+            // Upload to Firebase Storage
+            const storageRef = storage.ref();
+            const artRef = storageRef.child(`art/${currentRoom.id}/${Date.now()}.png`);
+            
+            // Convert data URL to blob
+            fetch(dataURL)
+                .then(res => res.blob())
+                .then(blob => {
+                    return artRef.put(blob);
+                })
+                .then(snapshot => {
+                    return snapshot.ref.getDownloadURL();
+                })
+                .then(downloadURL => {
+                    // Save art metadata to Firestore
+                    return db.collection('artworks').add({
+                        roomId: currentRoom.id,
+                        imageUrl: downloadURL,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        createdBy: userId,
+                        roomName: currentRoom.name
+                    });
+                })
+                .then(() => {
+                    showNotification('Art saved successfully!');
+                    clearCanvas();
+                })
+                .catch((error) => {
+                    console.error('Error saving art: ', error);
+                    showNotification('Error saving art. Please try again.');
+                });
+        }
+
+        function loadRoomArt() {
+            if (!currentRoom) return;
+            
+            db.collection('artworks')
+                .where('roomId', '==', currentRoom.id)
+                .orderBy('createdAt', 'desc')
+                .onSnapshot((querySnapshot) => {
+                    artGallery.innerHTML = '';
+                    
+                    querySnapshot.forEach((doc) => {
+                        const art = doc.data();
+                        const artItem = document.createElement('div');
+                        artItem.className = 'art-item';
+                        artItem.innerHTML = `
+                            <img src="${art.imageUrl}" alt="Artwork">
+                            <div class="art-info">
+                                <div>Room: ${art.roomName}</div>
+                            </div>
+                        `;
+                        
+                        artGallery.appendChild(artItem);
+                    });
+                });
+        }
+
+        function listenForArtUpdates() {
+            if (!currentRoom) return;
+            
+            db.collection('artworks')
+                .where('roomId', '==', currentRoom.id)
+                .orderBy('createdAt', 'desc')
+                .onSnapshot((querySnapshot) => {
+                    // This will trigger whenever new art is added to the current room
+                    loadRoomArt();
+                });
+        }
+
+        // Utility functions
+        function showNotification(message) {
+            notification.textContent = message;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        // Initialize the app
+        init();
     </script>
 </body>
 </html>
