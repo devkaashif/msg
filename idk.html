@@ -94,6 +94,7 @@
             transition: all 0.3s;
             display: flex;
             justify-content: space-between;
+            align-items: center;
         }
         
         .room-item:hover {
@@ -172,6 +173,12 @@
             border-radius: 8px;
             background-color: rgba(255, 255, 255, 0.1);
             animation: fadeIn 0.3s;
+            max-width: 80%;
+        }
+        
+        .message.own-message {
+            align-self: flex-end;
+            background-color: rgba(253, 187, 45, 0.2);
         }
         
         @keyframes fadeIn {
@@ -202,13 +209,13 @@
             color: #fdbb2d;
             display: flex;
             align-items: center;
-            justify-content: space-between;
         }
         
         .current-room span {
             background-color: rgba(253, 187, 45, 0.2);
             padding: 5px 10px;
             border-radius: 8px;
+            margin-left: 10px;
         }
         
         .user-info {
@@ -232,27 +239,10 @@
             color: #fdbb2d;
         }
         
-        .online-users {
+        .active-users {
             margin-top: 10px;
-            padding: 10px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 8px;
             font-size: 0.9rem;
-        }
-        
-        .online-users-title {
-            color: #fdbb2d;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        
-        .online-user {
-            display: inline-block;
-            background: rgba(253, 187, 45, 0.2);
-            padding: 3px 8px;
-            border-radius: 12px;
-            margin: 2px;
-            font-size: 0.8rem;
+            color: #ccc;
         }
         
         @media (max-width: 768px) {
@@ -265,6 +255,10 @@
                 width: 100%;
                 border-right: none;
                 border-bottom: 1px solid #444;
+            }
+            
+            .message {
+                max-width: 90%;
             }
         }
     </style>
@@ -294,10 +288,8 @@
             
             <div class="chat-section">
                 <div class="current-room">
-                    <div>
-                        Current Room: <span id="currentRoomName">Select a room to start chatting</span>
-                    </div>
-                    <div id="currentRoomUsers">0 users online</div>
+                    Current Room: <span id="currentRoomName">Select a room to start chatting</span>
+                    <div class="active-users" id="activeUsersCount">0 users online</div>
                 </div>
                 
                 <div class="user-info">
@@ -310,11 +302,6 @@
                         <h3>Welcome to Live Chat!</h3>
                         <p>Select a room from the left to start chatting or create a new one.</p>
                     </div>
-                </div>
-                
-                <div class="online-users" id="onlineUsers" style="display: none;">
-                    <div class="online-users-title">Online Users:</div>
-                    <div id="onlineUsersList"></div>
                 </div>
                 
                 <div class="message-input">
@@ -346,14 +333,12 @@
         const newRoomName = document.getElementById('newRoomName');
         const createRoomBtn = document.getElementById('createRoomBtn');
         const currentRoomName = document.getElementById('currentRoomName');
-        const currentRoomUsers = document.getElementById('currentRoomUsers');
+        const activeUsersCount = document.getElementById('activeUsersCount');
         const usernameInput = document.getElementById('username');
         const setUsernameBtn = document.getElementById('setUsernameBtn');
         const messagesContainer = document.getElementById('messagesContainer');
         const messageInput = document.getElementById('messageInput');
         const sendMessageBtn = document.getElementById('sendMessageBtn');
-        const onlineUsers = document.getElementById('onlineUsers');
-        const onlineUsersList = document.getElementById('onlineUsersList');
 
         // App state
         let currentRoom = null;
@@ -362,7 +347,7 @@
         let roomsListener = null;
         let messagesListener = null;
         let activeUsersListener = null;
-        let heartbeatInterval = null;
+        let roomUserCountListeners = {};
 
         // Set initial username
         usernameInput.value = currentUser;
@@ -399,8 +384,8 @@
                     const roomItem = createRoomElement(doc.id, room.name);
                     roomList.appendChild(roomItem);
                     
-                    // Set up active users listener for this room
-                    setupRoomUserCount(doc.id, roomItem);
+                    // Set up user count listener for this room
+                    setupRoomUserCountListener(doc.id, roomItem);
                 });
             }, error => {
                 console.error("Error loading rooms:", error);
@@ -425,19 +410,36 @@
             return roomItem;
         }
 
-        // Set up user count for a room
-        function setupRoomUserCount(roomId, roomItem) {
-            db.collection('rooms').doc(roomId)
-                .collection('activeUsers')
+        // Set up listener for user count in a room
+        function setupRoomUserCountListener(roomId, roomItem) {
+            // Remove existing listener if any
+            if (roomUserCountListeners[roomId]) {
+                roomUserCountListeners[roomId]();
+            }
+            
+            // Set up new listener for active users in this room
+            roomUserCountListeners[roomId] = db.collection('activeUsers')
+                .where('roomId', '==', roomId)
+                .where('isActive', '==', true)
                 .onSnapshot(snapshot => {
                     const userCount = snapshot.size;
                     const countElement = roomItem.querySelector('.user-count');
                     if (countElement) {
                         countElement.textContent = userCount;
                     }
+                    
+                    // Update current room if this is the active room
+                    if (currentRoom === roomId) {
+                        updateActiveUsersDisplay(userCount);
+                    }
                 }, error => {
-                    console.error("Error listening to room users:", error);
+                    console.error("Error listening to user count:", error);
                 });
+        }
+
+        // Update active users display for current room
+        function updateActiveUsersDisplay(count) {
+            activeUsersCount.textContent = `${count} user${count !== 1 ? 's' : ''} online`;
         }
 
         // Create a new room
@@ -481,133 +483,45 @@
             messageInput.disabled = false;
             sendMessageBtn.disabled = false;
             
-            // Add user to active users with heartbeat system
-            registerUserInRoom(roomId);
-            
-            // Load messages for this room
-            loadMessages(roomId);
-            
-            // Start monitoring active users in this room
-            monitorActiveUsers(roomId);
-            
-            // Add join message
-            addSystemMessage(`${currentUser} joined the room`);
-        }
-
-        // Register user in room with heartbeat
-        function registerUserInRoom(roomId) {
-            const userRef = db.collection('rooms').doc(roomId).collection('activeUsers').doc(userId);
-            
-            // Set user data with current timestamp
+            // Add user to active users
+            const userRef = db.collection('activeUsers').doc(userId);
             userRef.set({
+                userId: userId,
                 username: currentUser,
+                roomId: roomId,
                 userColor: userColor,
                 joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
-                isOnline: true
+                lastActive: firebase.firestore.FieldValue.serverTimestamp(),
+                isActive: true
             }).catch(error => {
                 console.error("Error adding user to active users:", error);
             });
             
-            // Start heartbeat to keep user active
-            startHeartbeat(roomId);
-        }
-
-        // Start heartbeat to keep user marked as online
-        function startHeartbeat(roomId) {
-            // Clear existing heartbeat
-            if (heartbeatInterval) {
-                clearInterval(heartbeatInterval);
-            }
+            // Load messages for this room
+            loadMessages(roomId);
             
-            // Update lastSeen every 20 seconds
-            heartbeatInterval = setInterval(() => {
-                if (currentRoom === roomId) {
-                    db.collection('rooms').doc(roomId).collection('activeUsers').doc(userId).update({
-                        lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
-                        isOnline: true
-                    }).catch(error => {
-                        console.error("Error updating heartbeat:", error);
-                    });
-                }
-            }, 20000);
-        }
-
-        // Monitor active users in current room
-        function monitorActiveUsers(roomId) {
-            // Remove existing listener
-            if (activeUsersListener) {
-                activeUsersListener();
-            }
-            
-            activeUsersListener = db.collection('rooms').doc(roomId)
-                .collection('activeUsers')
-                .onSnapshot(snapshot => {
-                    const users = [];
-                    snapshot.forEach(doc => {
-                        const userData = doc.data();
-                        // Only show users seen in the last 30 seconds as online
-                        const lastSeen = userData.lastSeen ? userData.lastSeen.toDate() : new Date();
-                        const secondsAgo = (new Date() - lastSeen) / 1000;
-                        
-                        if (secondsAgo < 30) {
-                            users.push({
-                                username: userData.username,
-                                color: userData.userColor
-                            });
-                        }
-                    });
-                    
-                    // Update online users display
-                    updateOnlineUsersDisplay(users);
-                    
-                    // Update room user count
-                    currentRoomUsers.textContent = `${users.length} user${users.length !== 1 ? 's' : ''} online`;
-                }, error => {
-                    console.error("Error monitoring active users:", error);
-                });
-        }
-
-        // Update online users display
-        function updateOnlineUsersDisplay(users) {
-            onlineUsersList.innerHTML = '';
-            
-            if (users.length === 0) {
-                onlineUsers.style.display = 'none';
-                return;
-            }
-            
-            onlineUsers.style.display = 'block';
-            
-            users.forEach(user => {
-                const userElement = document.createElement('span');
-                userElement.className = 'online-user';
-                userElement.style.color = user.color || '#fdbb2d';
-                userElement.textContent = user.username;
-                onlineUsersList.appendChild(userElement);
-            });
+            // Add join message
+            addSystemMessage(`${currentUser} joined the room`);
         }
 
         // Leave a room
         function leaveRoom(roomId) {
             if (!roomId) return;
             
-            // Remove user from active users
-            db.collection('rooms').doc(roomId).collection('activeUsers').doc(userId).delete()
-                .catch(error => {
-                    console.error("Error removing user from active users:", error);
-                });
+            // Mark user as inactive
+            db.collection('activeUsers').doc(userId).update({
+                isActive: false,
+                leftAt: firebase.firestore.FieldValue.serverTimestamp()
+            }).catch(error => {
+                console.error("Error marking user as inactive:", error);
+            });
             
-            // Stop heartbeat
-            if (heartbeatInterval) {
-                clearInterval(heartbeatInterval);
-                heartbeatInterval = null;
-            }
-            
-            // Remove listeners
+            // Remove messages listener
             if (messagesListener) {
                 messagesListener();
             }
+            
+            // Remove active users listener
             if (activeUsersListener) {
                 activeUsersListener();
             }
@@ -615,16 +529,13 @@
             // Clear messages container
             messagesContainer.innerHTML = '<div class="empty-state"><p>Select a room to start chatting</p></div>';
             
-            // Hide online users
-            onlineUsers.style.display = 'none';
-            
             // Add leave message
             addSystemMessage(`${currentUser} left the room`);
             
             // Reset current room
             currentRoom = null;
             currentRoomName.textContent = 'Select a room to start chatting';
-            currentRoomUsers.textContent = '0 users online';
+            activeUsersCount.textContent = '0 users online';
             messageInput.disabled = true;
             sendMessageBtn.disabled = true;
         }
@@ -650,6 +561,7 @@
                     messagesContainer.scrollTop = messagesContainer.scrollHeight;
                 }, error => {
                     console.error("Error loading messages:", error);
+                messagesContainer.innerHTML = '<div class="empty-state"><p>Error loading messages</p></div>';
                 });
         }
 
@@ -657,6 +569,10 @@
         function displayMessage(message) {
             const messageElement = document.createElement('div');
             messageElement.className = 'message';
+            
+            if (message.userId === userId) {
+                messageElement.classList.add('own-message');
+            }
             
             if (message.type === 'system') {
                 messageElement.innerHTML = `
@@ -703,6 +619,7 @@
             db.collection('rooms').doc(currentRoom).collection('messages').add({
                 type: 'user',
                 user: currentUser,
+                userId: userId,
                 userColor: userColor,
                 text: messageText,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
@@ -725,14 +642,16 @@
             const oldUsername = currentUser;
             currentUser = newUsername;
             
+            // Update active user document if in a room
             if (currentRoom) {
-                db.collection('rooms').doc(currentRoom).collection('activeUsers').doc(userId).update({
+                db.collection('activeUsers').doc(userId).update({
                     username: currentUser,
-                    lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+                    lastActive: firebase.firestore.FieldValue.serverTimestamp()
                 }).catch(error => {
                     console.error("Error updating username:", error);
                 });
                 
+                // Add system message about username change
                 addSystemMessage(`${oldUsername} changed their name to ${currentUser}`);
             }
         });
@@ -745,12 +664,12 @@
             return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         }
 
-        // Clean up inactive users (users not seen for more than 30 seconds)
+        // Clean up inactive users (runs periodically)
         function cleanupInactiveUsers() {
-            const thirtySecondsAgo = new Date(Date.now() - 30 * 1000);
+            const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
             
-            db.collectionGroup('activeUsers')
-                .where('lastSeen', '<', firebase.firestore.Timestamp.fromDate(thirtySecondsAgo))
+            db.collection('activeUsers')
+                .where('lastActive', '<', firebase.firestore.Timestamp.fromDate(fiveMinutesAgo))
                 .get()
                 .then(snapshot => {
                     snapshot.forEach(doc => {
@@ -764,11 +683,23 @@
                 });
         }
 
+        // Update last active timestamp periodically
+        function updateLastActive() {
+            if (currentRoom) {
+                db.collection('activeUsers').doc(userId).update({
+                    lastActive: firebase.firestore.FieldValue.serverTimestamp()
+                }).catch(error => {
+                    console.error("Error updating last active:", error);
+                });
+            }
+        }
+
         // Initialize the app
         loadRooms();
 
-        // Set up periodic cleanup
-        setInterval(cleanupInactiveUsers, 15000); // Clean up every 15 seconds
+        // Set up periodic tasks
+        setInterval(cleanupInactiveUsers, 60000);
+        setInterval(updateLastActive, 30000);
 
         // Handle page unload
         window.addEventListener('beforeunload', () => {
@@ -779,12 +710,11 @@
 
         // Handle page visibility change
         document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'hidden' && currentRoom) {
-                // Update last seen when tab becomes inactive
-                db.collection('rooms').doc(currentRoom).collection('activeUsers').doc(userId).update({
-                    lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+            if (currentRoom) {
+                db.collection('activeUsers').doc(userId).update({
+                    lastActive: firebase.firestore.FieldValue.serverTimestamp()
                 }).catch(error => {
-                    console.error("Error updating last seen on hide:", error);
+                    console.error("Error updating last active:", error);
                 });
             }
         });
