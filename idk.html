@@ -322,14 +322,28 @@
         // App state
         let currentRoom = null;
         let currentUser = `User${Math.floor(Math.random() * 10000)}`;
+        let userId = generateUserId();
         let roomsListener = null;
         let messagesListener = null;
+        let activeUsersListener = null;
 
         // Set initial username
         usernameInput.value = currentUser;
 
         // Generate a random color for the user
         const userColor = '#' + Math.floor(Math.random()*16777215).toString(16);
+
+        // Generate a unique user ID for this session
+        function generateUserId() {
+            // Try to get existing ID from sessionStorage
+            let id = sessionStorage.getItem('chatUserId');
+            if (!id) {
+                // Generate a new ID if none exists
+                id = 'user_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+                sessionStorage.setItem('chatUserId', id);
+            }
+            return id;
+        }
 
         // Load rooms from Firestore
         function loadRooms() {
@@ -349,10 +363,15 @@
                     const room = doc.data();
                     const roomItem = document.createElement('li');
                     roomItem.className = 'room-item';
-                    roomItem.innerHTML = `
-                        <span>${room.name}</span>
-                        <span class="user-count">${room.userCount || 0}</span>
-                    `;
+                    roomItem.dataset.roomId = doc.id;
+                    
+                    // Get active user count for this room
+                    getActiveUserCount(doc.id).then(count => {
+                        roomItem.innerHTML = `
+                            <span>${room.name}</span>
+                            <span class="user-count">${count}</span>
+                        `;
+                    });
                     
                     roomItem.addEventListener('click', () => {
                         joinRoom(doc.id, room.name);
@@ -365,6 +384,13 @@
             });
         }
 
+        // Get active user count for a room
+        async function getActiveUserCount(roomId) {
+            const snapshot = await db.collection('rooms').doc(roomId)
+                .collection('activeUsers').get();
+            return snapshot.size;
+        }
+
         // Create a new room
         createRoomBtn.addEventListener('click', () => {
             const roomName = newRoomName.value.trim();
@@ -375,8 +401,7 @@
             
             db.collection('rooms').add({
                 name: roomName,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                userCount: 0
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
             }).then(() => {
                 newRoomName.value = '';
             }).catch(error => {
@@ -398,15 +423,22 @@
             // Highlight selected room
             document.querySelectorAll('.room-item').forEach(item => {
                 item.classList.remove('active');
+                if (item.dataset.roomId === roomId) {
+                    item.classList.add('active');
+                }
             });
             
             // Enable message input
             messageInput.disabled = false;
             sendMessageBtn.disabled = false;
             
-            // Update room user count
-            db.collection('rooms').doc(roomId).update({
-                userCount: firebase.firestore.FieldValue.increment(1)
+            // Add user to active users
+            db.collection('rooms').doc(roomId).collection('activeUsers').doc(userId).set({
+                username: currentUser,
+                joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                userColor: userColor
+            }).catch(error => {
+                console.error("Error adding user to active users:", error);
             });
             
             // Load messages for this room
@@ -414,24 +446,53 @@
             
             // Add join message
             addSystemMessage(`${currentUser} joined the room`);
+            
+            // Update room user counts
+            updateAllRoomCounts();
         }
 
         // Leave a room
         function leaveRoom(roomId) {
             if (!roomId) return;
             
-            // Update room user count
-            db.collection('rooms').doc(roomId).update({
-                userCount: firebase.firestore.FieldValue.increment(-1)
-            });
+            // Remove user from active users
+            db.collection('rooms').doc(roomId).collection('activeUsers').doc(userId).delete()
+                .catch(error => {
+                    console.error("Error removing user from active users:", error);
+                });
             
             // Remove messages listener
             if (messagesListener) {
                 messagesListener();
             }
             
+            // Remove active users listener
+            if (activeUsersListener) {
+                activeUsersListener();
+            }
+            
             // Clear messages container
             messagesContainer.innerHTML = '<div class="empty-state"><p>Select a room to start chatting</p></div>';
+            
+            // Update room user counts
+            updateAllRoomCounts();
+            
+            // Add leave message
+            addSystemMessage(`${currentUser} left the room`);
+        }
+
+        // Update all room user counts in the UI
+        function updateAllRoomCounts() {
+            document.querySelectorAll('.room-item').forEach(async (item) => {
+                const roomId = item.dataset.roomId;
+                if (roomId) {
+                    const count = await getActiveUserCount(roomId);
+                    const countElement = item.querySelector('.user-count');
+                    if (countElement) {
+                        countElement.textContent = count;
+                    }
+                }
+            });
         }
 
         // Load messages for a room
@@ -531,8 +592,15 @@
             const oldUsername = currentUser;
             currentUser = newUsername;
             
-            // Add system message about username change if in a room
+            // Update active user document if in a room
             if (currentRoom) {
+                db.collection('rooms').doc(currentRoom).collection('activeUsers').doc(userId).update({
+                    username: currentUser
+                }).catch(error => {
+                    console.error("Error updating username:", error);
+                });
+                
+                // Add system message about username change
                 addSystemMessage(`${oldUsername} changed their name to ${currentUser}`);
             }
         });
@@ -552,6 +620,26 @@
         window.addEventListener('beforeunload', () => {
             if (currentRoom) {
                 leaveRoom(currentRoom);
+            }
+        });
+
+        // Handle page visibility change (tab switching)
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden' && currentRoom) {
+                // User switched tabs or minimized window - remove from active users
+                db.collection('rooms').doc(currentRoom).collection('activeUsers').doc(userId).delete()
+                    .catch(error => {
+                        console.error("Error removing user from active users:", error);
+                    });
+            } else if (document.visibilityState === 'visible' && currentRoom) {
+                // User returned to the tab - add back to active users
+                db.collection('rooms').doc(currentRoom).collection('activeUsers').doc(userId).set({
+                    username: currentUser,
+                    joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    userColor: userColor
+                }).catch(error => {
+                    console.error("Error adding user to active users:", error);
+                });
             }
         });
     </script>
