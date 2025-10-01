@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Sharing System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #6e8efb, #a777e3);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+        
+        header {
+            background: #4a6cf7;
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .main-content {
+            padding: 25px;
+        }
+        
+        .card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+        
+        h2 {
+            color: #4a6cf7;
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+        
+        textarea, input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border 0.3s;
+        }
+        
+        textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+        
+        textarea:focus, input:focus {
+            outline: none;
+            border-color: #4a6cf7;
+            box-shadow: 0 0 0 2px rgba(74, 108, 247, 0.2);
+        }
+        
+        .btn {
+            background: #4a6cf7;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .btn:hover {
+            background: #3a5ce5;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn i {
+            margin-right: 8px;
+        }
+        
+        .shared-texts {
+            margin-top: 30px;
+        }
+        
+        .text-item {
+            background: white;
+            border-radius: 8px;
+            padding: 18px;
+            margin-bottom: 15px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+            border-left: 4px solid #4a6cf7;
+        }
+        
+        .text-content {
+            margin-bottom: 10px;
+            line-height: 1.5;
+            color: #444;
+        }
+        
+        .text-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: #777;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 30px;
+            color: #777;
+        }
+        
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            color: #ccc;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #4a6cf7;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            transform: translateX(150%);
+            transition: transform 0.4s;
+        }
+        
+        .notification.show {
+            transform: translateX(0);
+        }
+        
+        .notification.success {
+            background: #28a745;
+        }
+        
+        .notification.error {
+            background: #dc3545;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #777;
+            font-size: 0.9rem;
+            border-top: 1px solid #eee;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                border-radius: 0;
+            }
+            
+            header {
+                padding: 20px 15px;
+            }
+            
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            .main-content {
+                padding: 15px;
+            }
+        }
+    </style>
+    <!-- Include Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Text Sharing System</h1>
+            <p class="subtitle">Share your text snippets with others instantly</p>
+        </header>
+        
+        <div class="main-content">
+            <div class="card">
+                <h2>Share New Text</h2>
+                <div class="form-group">
+                    <label for="textTitle">Title (optional)</label>
+                    <input type="text" id="textTitle" placeholder="Give your text a title...">
+                </div>
+                <div class="form-group">
+                    <label for="textContent">Your Text</label>
+                    <textarea id="textContent" placeholder="Type or paste your text here..."></textarea>
+                </div>
+                <button id="shareBtn" class="btn">
+                    <i>📤</i> Share Text
+                </button>
+            </div>
+            
+            <div class="shared-texts">
+                <h2>Shared Texts</h2>
+                <div id="textsList">
+                    <div class="loading">
+                        <i>⏳</i> Loading shared texts...
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>Text Sharing System &copy; 2023 | Powered by Firebase</p>
+        </footer>
+    </div>
+    
+    <div id="notification" class="notification"></div>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBveyQ9XjWNvSCmQ_I2CO8lq9PqK8fAN60",
+            authDomain: "lol1-e2fb6.firebaseapp.com",
+            projectId: "lol1-e2fb6",
+            storageBucket: "lol1-e2fb6.firebasestorage.app",
+            messagingSenderId: "513142281561",
+            appId: "1:513142281561:web:1931e7c57959d55235e848",
+            measurementId: "G-HKFRG4WS0H"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // DOM elements
+        const textTitle = document.getElementById('textTitle');
+        const textContent = document.getElementById('textContent');
+        const shareBtn = document.getElementById('shareBtn');
+        const textsList = document.getElementById('textsList');
+        const notification = document.getElementById('notification');
+
+        // Show notification
+        function showNotification(message, type = 'success') {
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        // Share text function
+        shareBtn.addEventListener('click', async () => {
+            const title = textTitle.value.trim();
+            const content = textContent.value.trim();
+            
+            if (!content) {
+                showNotification('Please enter some text to share', 'error');
+                return;
+            }
+            
+            try {
+                shareBtn.disabled = true;
+                shareBtn.innerHTML = '<i>⏳</i> Sharing...';
+                
+                // Add text to Firestore
+                await db.collection('sharedTexts').add({
+                    title: title || 'Untitled',
+                    content: content,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                // Clear form
+                textTitle.value = '';
+                textContent.value = '';
+                
+                showNotification('Text shared successfully!');
+            } catch (error) {
+                console.error('Error sharing text: ', error);
+                showNotification('Failed to share text. Please try again.', 'error');
+            } finally {
+                shareBtn.disabled = false;
+                shareBtn.innerHTML = '<i>📤</i> Share Text';
+            }
+        });
+
+        // Load and display shared texts
+        function loadSharedTexts() {
+            textsList.innerHTML = '<div class="loading"><i>⏳</i> Loading shared texts...</div>';
+            
+            db.collection('sharedTexts')
+                .orderBy('timestamp', 'desc')
+                .onSnapshot(snapshot => {
+                    if (snapshot.empty) {
+                        textsList.innerHTML = `
+                            <div class="empty-state">
+                                <i>📝</i>
+                                <h3>No texts shared yet</h3>
+                                <p>Be the first to share a text snippet!</p>
+                            </div>
+                        `;
+                        return;
+                    }
+                    
+                    textsList.innerHTML = '';
+                    snapshot.forEach(doc => {
+                        const text = doc.data();
+                        const textItem = document.createElement('div');
+                        textItem.className = 'text-item';
+                        
+                        // Format timestamp
+                        const timestamp = text.timestamp ? 
+                            text.timestamp.toDate().toLocaleString() : 
+                            'Just now';
+                        
+                        textItem.innerHTML = `
+                            <h3>${text.title}</h3>
+                            <div class="text-content">${text.content}</div>
+                            <div class="text-meta">
+                                <span>Shared ${timestamp}</span>
+                                <span>ID: ${doc.id.substring(0, 8)}...</span>
+                            </div>
+                        `;
+                        
+                        textsList.appendChild(textItem);
+                    });
+                }, error => {
+                    console.error('Error loading texts: ', error);
+                    textsList.innerHTML = `
+                        <div class="empty-state">
+                            <i>⚠️</i>
+                            <h3>Error loading texts</h3>
+                            <p>Please check your connection and try again.</p>
+                        </div>
+                    `;
+                });
+        }
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSharedTexts();
+        });
+    </script>
+</body>
+</html>
