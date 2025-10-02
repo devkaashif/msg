@@ -1,544 +1,228 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Firebase Chat App</title>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        body {
-            background: linear-gradient(135deg, #6e8efb, #a777e3);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-        
-        .container {
-            width: 100%;
-            max-width: 900px;
-            background-color: white;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            height: 85vh;
-        }
-        
-        .header {
-            background: linear-gradient(to right, #4a6cf7, #6a11cb);
-            color: white;
-            padding: 20px;
-            text-align: center;
-            position: relative;
-        }
-        
-        .header h1 {
-            font-size: 24px;
-            font-weight: 600;
-        }
-        
-        .user-info {
-            position: absolute;
-            right: 20px;
-            top: 50%;
-            transform: translateY(-50%);
-            display: flex;
-            align-items: center;
-        }
-        
-        .user-info span {
-            margin-right: 10px;
-        }
-        
-        .logout-btn {
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            color: white;
-            padding: 6px 12px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.3s;
-        }
-        
-        .logout-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
-        
-        .auth-container {
-            padding: 40px;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-        }
-        
-        .auth-form {
-            width: 100%;
-            max-width: 400px;
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-        
-        .auth-tabs {
-            display: flex;
-            margin-bottom: 25px;
-            border-radius: 8px;
-            overflow: hidden;
-            background: #f5f7fb;
-        }
-        
-        .auth-tab {
-            flex: 1;
-            padding: 12px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-weight: 500;
-        }
-        
-        .auth-tab.active {
-            background: #4a6cf7;
-            color: white;
-        }
-        
-        .input-group {
-            margin-bottom: 20px;
-            text-align: left;
-        }
-        
-        .input-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-            color: #333;
-        }
-        
-        .input-group input {
-            width: 100%;
-            padding: 12px 15px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: all 0.3s;
-        }
-        
-        .input-group input:focus {
-            border-color: #4a6cf7;
-            outline: none;
-            box-shadow: 0 0 0 2px rgba(74, 108, 247, 0.2);
-        }
-        
-        .auth-btn {
-            width: 100%;
-            padding: 12px;
-            background: linear-gradient(to right, #4a6cf7, #6a11cb);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .auth-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(74, 108, 247, 0.4);
-        }
-        
-        .chat-container {
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-            display: none;
-        }
-        
-        .messages-container {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-            background-color: #f9fafc;
-        }
-        
-        .message {
-            margin-bottom: 15px;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .message.sent {
-            align-items: flex-end;
-        }
-        
-        .message.received {
-            align-items: flex-start;
-        }
-        
-        .message-bubble {
-            max-width: 70%;
-            padding: 12px 18px;
-            border-radius: 18px;
-            position: relative;
-            word-wrap: break-word;
-        }
-        
-        .sent .message-bubble {
-            background: linear-gradient(to right, #4a6cf7, #6a11cb);
-            color: white;
-            border-bottom-right-radius: 5px;
-        }
-        
-        .received .message-bubble {
-            background: #eaeef7;
-            color: #333;
-            border-bottom-left-radius: 5px;
-        }
-        
-        .message-sender {
-            font-size: 12px;
-            margin-bottom: 5px;
-            color: #666;
-            padding: 0 10px;
-        }
-        
-        .message-time {
-            font-size: 11px;
-            margin-top: 5px;
-            color: rgba(255, 255, 255, 0.7);
-            text-align: right;
-        }
-        
-        .received .message-time {
-            color: #999;
-        }
-        
-        .input-container {
-            padding: 20px;
-            border-top: 1px solid #eee;
-            display: flex;
-            background: white;
-        }
-        
-        .message-input {
-            flex: 1;
-            padding: 12px 15px;
-            border: 1px solid #ddd;
-            border-radius: 24px;
-            font-size: 16px;
-            outline: none;
-            transition: all 0.3s;
-        }
-        
-        .message-input:focus {
-            border-color: #4a6cf7;
-            box-shadow: 0 0 0 2px rgba(74, 108, 247, 0.2);
-        }
-        
-        .send-btn {
-            margin-left: 10px;
-            background: linear-gradient(to right, #4a6cf7, #6a11cb);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .send-btn:hover {
-            transform: scale(1.05);
-            box-shadow: 0 5px 15px rgba(74, 108, 247, 0.4);
-        }
-        
-        .send-btn svg {
-            width: 20px;
-            height: 20px;
-        }
-        
-        .status {
-            text-align: center;
-            padding: 10px;
-            color: #666;
-            font-style: italic;
-        }
-        
-        .error {
-            color: #e74c3c;
-            margin-top: 10px;
-            text-align: center;
-            font-size: 14px;
-        }
-        
-        @media (max-width: 600px) {
-            .container {
-                height: 95vh;
-                border-radius: 0;
-            }
-            
-            .header h1 {
-                font-size: 20px;
-            }
-            
-            .message-bubble {
-                max-width: 85%;
-            }
-        }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Live Text Sharing — Firebase (Demo)</title>
+  <style>
+    :root{font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial;color:#111}
+    body{max-width:900px;margin:28px auto;padding:20px}
+    h1{font-size:20px;margin:0 0 6px}
+    p.lead{margin:0 0 18px;color:#444}
+    .card{border:1px solid #e6e6e6;border-radius:8px;padding:12px;margin-bottom:12px;background:#fff}
+    textarea{width:100%;min-height:120px;padding:8px;font-size:14px;border-radius:6px;border:1px solid #ddd}
+    input[type=text]{width:100%;padding:8px;border-radius:6px;border:1px solid #ddd}
+    .row{display:flex;gap:8px}
+    .btn{display:inline-block;padding:8px 12px;border-radius:6px;border:0;background:#0b74de;color:white;cursor:pointer}
+    .btn.ghost{background:#f3f3f3;color:#111}
+    .meta{font-size:12px;color:#666;margin-top:6px}
+    .note{white-space:pre-wrap}
+    .controls{display:flex;gap:6px;align-items:center}
+    .small{font-size:13px;color:#666}
+    .notes-wrap{margin-top:18px}
+    .note-item{padding:10px;border-radius:8px;border:1px solid #eee;margin-bottom:10px}
+    .muted{color:#777;font-size:12px}
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>Firebase Chat App</h1>
-            <div class="user-info" id="userInfo" style="display: none;">
-                <span id="userEmail"></span>
-                <button class="logout-btn" id="logoutBtn">Logout</button>
-            </div>
-        </div>
-        
-        <div class="auth-container" id="authContainer">
-            <div class="auth-form">
-                <div class="auth-tabs">
-                    <div class="auth-tab active" id="loginTab">Login</div>
-                    <div class="auth-tab" id="signupTab">Sign Up</div>
-                </div>
-                
-                <div class="input-group">
-                    <label for="email">Email</label>
-                    <input type="email" id="email" placeholder="Enter your email">
-                </div>
-                
-                <div class="input-group">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" placeholder="Enter your password">
-                </div>
-                
-                <button class="auth-btn" id="authBtn">Login</button>
-                
-                <div class="error" id="authError"></div>
-            </div>
-        </div>
-        
-        <div class="chat-container" id="chatContainer">
-            <div class="messages-container" id="messagesContainer">
-                <div class="status" id="statusMessage">Loading messages...</div>
-            </div>
-            
-            <div class="input-container">
-                <input type="text" class="message-input" id="messageInput" placeholder="Type a message...">
-                <button class="send-btn" id="sendBtn">
-                    <svg viewBox="0 0 24 24" fill="white">
-                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
-                    </svg>
-                </button>
-            </div>
-        </div>
+  <h1>Live Text Sharing (Demo)</h1>
+  <p class="lead">Write text and share it. Other visitors will see updates instantly.</p>
+
+  <div class="card">
+    <label class="small">Your name (optional)</label>
+    <input id="displayName" type="text" placeholder="e.g. Alice" />
+    <label class="small" style="margin-top:8px;display:block">Message</label>
+    <textarea id="message" placeholder="Type something to share live..."></textarea>
+    <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
+      <button id="sendBtn" class="btn">Share</button>
+      <button id="clearBtn" class="btn ghost">Clear</button>
+      <div id="status" class="muted" style="margin-left:auto">Connecting...</div>
     </div>
+  </div>
 
-    <script>
-        // Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyD0T-mS__FlN3QASJnmD0K6S5VNDiN2bxQ",
-            authDomain: "chat-app-demo-12345.firebaseapp.com",
-            projectId: "chat-app-demo-12345",
-            storageBucket: "chat-app-demo-12345.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:123456789:web:abcdef123456"
+  <div class="notes-wrap">
+    <h2 style="font-size:16px;margin-bottom:8px">Live Messages</h2>
+    <div id="notes" aria-live="polite"></div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
+  <!--
+    IMPORTANT: I used your provided apiKey below and left placeholders for the other
+    Firebase config values. Replace the placeholders (the values that start with PLACEHOLDER_)
+    with the values from your Firebase project settings (in the Firebase console).
+
+    If you have a full firebaseConfig object already, you can paste it here and keep apiKey as provided.
+  -->
+  <script>
+    // ----- Firebase config (fill in your project values) -----
+    const firebaseConfig = {
+      apiKey: "AIzaSyD0T-mS__FlN3QASJnmD0K6S5VNDiN2bxQ",
+      authDomain: "PLACEHOLDER_YOUR_AUTH_DOMAIN.firebaseapp.com",
+      databaseURL: "https://PLACEHOLDER_YOUR_DATABASE_NAME-default-rtdb.firebaseio.com",
+      projectId: "PLACEHOLDER_PROJECT_ID",
+      storageBucket: "PLACEHOLDER_PROJECT_ID.appspot.com",
+      messagingSenderId: "PLACEHOLDER_MESSAGING_SENDER_ID",
+      appId: "PLACEHOLDER_APP_ID"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    // DOM refs
+    const sendBtn = document.getElementById('sendBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const messageEl = document.getElementById('message');
+    const notesEl = document.getElementById('notes');
+    const statusEl = document.getElementById('status');
+    const nameEl = document.getElementById('displayName');
+
+    // Path in Realtime Database where notes will be stored
+    const NOTES_PATH = 'live_messages';
+
+    // Sign in anonymously so we have a uid for ownership checks
+    auth.signInAnonymously().catch(err => {
+      console.error('Auth error', err);
+      statusEl.textContent = 'Auth error: ' + err.message;
+    });
+
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        statusEl.textContent = 'Connected as ' + (user.isAnonymous ? 'anonymous' : (user.displayName || user.email));
+        window.currentUid = user.uid;
+        startListening();
+      } else {
+        statusEl.textContent = 'Not signed in';
+      }
+    });
+
+    // Send message (create a new child under NOTES_PATH)
+    sendBtn.addEventListener('click', () => {
+      const text = messageEl.value && messageEl.value.trim();
+      if (!text) return alert('Please type a message first');
+
+      const payload = {
+        text,
+        name: nameEl.value ? nameEl.value.trim() : 'Anonymous',
+        uid: window.currentUid || null,
+        ts: Date.now()
+      };
+
+      // push() creates a unique key and writes data
+      db.ref(NOTES_PATH).push(payload)
+        .then(() => {
+          messageEl.value = '';
+        })
+        .catch(err => {
+          console.error('Write error', err);
+          alert('Failed to share: ' + err.message);
+        });
+    });
+
+    // Clear textarea
+    clearBtn.addEventListener('click', () => messageEl.value = '');
+
+    // Render helper
+    function renderNote(key, noteData) {
+      const existing = document.getElementById(key);
+      if (noteData === null) {
+        // removed
+        if (existing) existing.remove();
+        return;
+      }
+
+      const el = existing || document.createElement('div');
+      el.className = 'note-item';
+      el.id = key;
+
+      const time = new Date(noteData.ts || Date.now()).toLocaleString();
+
+      let controlsHtml = '';
+      if (noteData.uid && window.currentUid && noteData.uid === window.currentUid) {
+        controlsHtml = ` <button data-key="${key}" class="btn ghost" data-action="delete">Delete</button>`;
+      }
+
+      el.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div>
+            <div style="font-weight:600">${escapeHtml(noteData.name || 'Anonymous')}</div>
+            <div class="muted" style="margin-top:4px">${time}</div>
+          </div>
+          <div class="controls">${controlsHtml}</div>
+        </div>
+        <div class="note" style="margin-top:8px">${escapeHtml(noteData.text)}</div>
+      `;
+
+      // attach listeners for delete
+      const delBtn = el.querySelector('[data-action="delete"]');
+      if (delBtn) {
+        delBtn.onclick = () => {
+          if (!confirm('Delete this message?')) return;
+          db.ref(`${NOTES_PATH}/${key}`).remove().catch(err => alert('Remove failed: ' + err.message));
         };
+      }
 
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const database = firebase.database();
+      if (!existing) notesEl.prepend(el); // newest on top
+    }
 
-        // DOM Elements
-        const authContainer = document.getElementById('authContainer');
-        const chatContainer = document.getElementById('chatContainer');
-        const loginTab = document.getElementById('loginTab');
-        const signupTab = document.getElementById('signupTab');
-        const authBtn = document.getElementById('authBtn');
-        const authError = document.getElementById('authError');
-        const emailInput = document.getElementById('email');
-        const passwordInput = document.getElementById('password');
-        const userInfo = document.getElementById('userInfo');
-        const userEmail = document.getElementById('userEmail');
-        const logoutBtn = document.getElementById('logoutBtn');
-        const messagesContainer = document.getElementById('messagesContainer');
-        const messageInput = document.getElementById('messageInput');
-        const sendBtn = document.getElementById('sendBtn');
-        const statusMessage = document.getElementById('statusMessage');
+    // Start listening for live updates
+    let listening = false;
+    function startListening() {
+      if (listening) return;
+      listening = true;
+      const ref = db.ref(NOTES_PATH);
 
-        let isLogin = true;
+      // initial set and child_added
+      ref.on('child_added', snapshot => renderNote(snapshot.key, snapshot.val()));
+      ref.on('child_changed', snapshot => renderNote(snapshot.key, snapshot.val()));
+      ref.on('child_removed', snapshot => renderNote(snapshot.key, null));
 
-        // Switch between login and signup
-        loginTab.addEventListener('click', () => {
-            if (!isLogin) {
-                isLogin = true;
-                loginTab.classList.add('active');
-                signupTab.classList.remove('active');
-                authBtn.textContent = 'Login';
-            }
-        });
+      // optional: connection state monitoring
+      const connectedRef = db.ref('.info/connected');
+      connectedRef.on('value', snap => {
+        const connected = snap.val();
+        statusEl.textContent = connected ? 'Online' : 'Offline';
+      });
+    }
 
-        signupTab.addEventListener('click', () => {
-            if (isLogin) {
-                isLogin = false;
-                signupTab.classList.add('active');
-                loginTab.classList.remove('active');
-                authBtn.textContent = 'Sign Up';
-            }
-        });
+    // helper: escape HTML to avoid injection in demo
+    function escapeHtml(str){
+      if (str == null) return '';
+      return String(str)
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;')
+        .replace(/'/g,'&#039;');
+    }
 
-        // Authentication
-        authBtn.addEventListener('click', () => {
-            const email = emailInput.value;
-            const password = passwordInput.value;
-            
-            if (!email || !password) {
-                authError.textContent = 'Please enter both email and password';
-                return;
-            }
-            
-            if (isLogin) {
-                // Login
-                auth.signInWithEmailAndPassword(email, password)
-                    .then((userCredential) => {
-                        // Signed in
-                        authError.textContent = '';
-                    })
-                    .catch((error) => {
-                        authError.textContent = error.message;
-                    });
-            } else {
-                // Sign up
-                auth.createUserWithEmailAndPassword(email, password)
-                    .then((userCredential) => {
-                        // Signed up
-                        authError.textContent = '';
-                    })
-                    .catch((error) => {
-                        authError.textContent = error.message;
-                    });
-            }
-        });
+    // Optional: keep list small in UI by limiting number of items loaded
+    // (Could implement paging or history trimming on the server)
+  </script>
 
-        // Logout
-        logoutBtn.addEventListener('click', () => {
-            auth.signOut();
-        });
+  <!--
+    Quick setup notes (put these in your Firebase console):
 
-        // Send message
-        function sendMessage() {
-            const message = messageInput.value.trim();
-            if (message === '') return;
-            
-            const user = auth.currentUser;
-            if (user) {
-                const messageData = {
-                    text: message,
-                    sender: user.email,
-                    timestamp: Date.now()
-                };
-                
-                database.ref('messages').push(messageData)
-                    .then(() => {
-                        messageInput.value = '';
-                    })
-                    .catch((error) => {
-                        console.error('Error sending message:', error);
-                    });
-            }
-        }
+    1) Realtime Database: create a database and copy the databaseURL into firebaseConfig.databaseURL
+       e.g. https://your-db-name-default-rtdb.firebaseio.com
 
-        sendBtn.addEventListener('click', sendMessage);
-        
-        messageInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                sendMessage();
-            }
-        });
+    2) Security rules for quick testing (NOT for production):
 
-        // Display messages
-        function displayMessage(key, message) {
-            const messageElement = document.createElement('div');
-            const user = auth.currentUser;
-            
-            if (user && message.sender === user.email) {
-                messageElement.className = 'message sent';
-            } else {
-                messageElement.className = 'message received';
-            }
-            
-            const time = new Date(message.timestamp);
-            const timeString = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            
-            messageElement.innerHTML = `
-                ${message.sender !== user.email ? `<div class="message-sender">${message.sender}</div>` : ''}
-                <div class="message-bubble">
-                    ${message.text}
-                    <div class="message-time">${timeString}</div>
-                </div>
-            `;
-            
-            messagesContainer.appendChild(messageElement);
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }
+       {
+         "rules": {
+           ".read": true,
+           ".write": true
+         }
+       }
 
-        // Auth state observer
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                // User is signed in
-                authContainer.style.display = 'none';
-                chatContainer.style.display = 'flex';
-                userInfo.style.display = 'flex';
-                userEmail.textContent = user.email;
-                
-                // Load messages
-                statusMessage.textContent = 'Loading messages...';
-                database.ref('messages').on('value', (snapshot) => {
-                    messagesContainer.innerHTML = '';
-                    statusMessage.textContent = '';
-                    
-                    snapshot.forEach((childSnapshot) => {
-                        const message = childSnapshot.val();
-                        displayMessage(childSnapshot.key, message);
-                    });
-                    
-                    if (!snapshot.exists()) {
-                        statusMessage.textContent = 'No messages yet. Start the conversation!';
-                    }
-                });
-            } else {
-                // User is signed out
-                authContainer.style.display = 'flex';
-                chatContainer.style.display = 'none';
-                userInfo.style.display = 'none';
-                messagesContainer.innerHTML = '<div class="status" id="statusMessage">Loading messages...</div>';
-                
-                // Stop listening to messages
-                database.ref('messages').off();
-            }
-        });
-    </script>
+       For production, restrict write permissions or require authentication.
+
+    3) If you prefer Firestore instead of Realtime Database, let me know and I will give
+       a Firestore version of this single-file app.
+  -->
 </body>
 </html>
