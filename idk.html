@@ -3,107 +3,329 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Firebase Note Sharing</title>
+  <title>Live Text Sharing</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f9fafb;
+    * {
       margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    body {
+      background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+      color: #333;
+      min-height: 100vh;
       padding: 20px;
       display: flex;
       flex-direction: column;
       align-items: center;
     }
-    h1 {
-      color: #222;
-      margin-bottom: 15px;
-    }
-    #noteForm {
-      display: flex;
+    
+    .container {
       width: 100%;
-      max-width: 500px;
-      gap: 10px;
-      margin-bottom: 20px;
+      max-width: 800px;
+      background-color: rgba(255, 255, 255, 0.95);
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      overflow: hidden;
     }
-    input {
-      flex: 1;
-      padding: 12px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-      font-size: 16px;
-    }
-    button {
-      padding: 12px 18px;
-      border-radius: 6px;
-      border: none;
-      background: #007BFF;
+    
+    header {
+      background: linear-gradient(to right, #4a00e0, #8e2de2);
       color: white;
-      cursor: pointer;
-      font-size: 16px;
-      transition: 0.2s;
+      padding: 20px;
+      text-align: center;
     }
-    button:hover {
-      background: #0056b3;
+    
+    h1 {
+      font-size: 2.2rem;
+      margin-bottom: 10px;
     }
-    #notes {
-      width: 100%;
-      max-width: 500px;
+    
+    .subtitle {
+      font-size: 1rem;
+      opacity: 0.9;
     }
-    .note {
-      background: white;
-      padding: 12px;
-      margin: 8px 0;
-      border-radius: 6px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    
+    .status-bar {
       display: flex;
+      align-items: center;
       justify-content: space-between;
+      padding: 10px 20px;
+      background-color: #f8f9fa;
+      border-bottom: 1px solid #e9ecef;
+      font-size: 0.9rem;
+    }
+    
+    .status {
+      display: flex;
       align-items: center;
     }
-    .note-text {
+    
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+    
+    .connected {
+      background-color: #28a745;
+    }
+    
+    .disconnected {
+      background-color: #dc3545;
+    }
+    
+    .user-count {
+      display: flex;
+      align-items: center;
+      color: #6c757d;
+    }
+    
+    .user-count i {
+      margin-right: 5px;
+    }
+    
+    .main-content {
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+    }
+    
+    .input-section {
+      margin-bottom: 20px;
+    }
+    
+    .input-container {
+      position: relative;
+      margin-bottom: 15px;
+    }
+    
+    textarea {
+      width: 100%;
+      height: 120px;
+      padding: 15px;
+      border: 2px solid #e1e5ee;
+      border-radius: 8px;
+      font-size: 1rem;
+      resize: vertical;
+      transition: border-color 0.3s;
+    }
+    
+    textarea:focus {
+      outline: none;
+      border-color: #4a00e0;
+    }
+    
+    .char-count {
+      position: absolute;
+      bottom: 10px;
+      right: 15px;
+      font-size: 0.8rem;
+      color: #6c757d;
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 10px;
+    }
+    
+    button {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    button i {
+      margin-right: 8px;
+    }
+    
+    .primary-btn {
+      background: linear-gradient(to right, #4a00e0, #8e2de2);
+      color: white;
+      flex: 2;
+    }
+    
+    .secondary-btn {
+      background-color: #f8f9fa;
+      color: #495057;
+      border: 1px solid #dee2e6;
       flex: 1;
     }
-    .delete-btn {
-      background: crimson;
-      border: none;
-      color: white;
-      padding: 6px 10px;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: 0.2s;
-      margin-left: 10px;
+    
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     }
-    .delete-btn:hover {
-      background: darkred;
+    
+    .output-section {
+      border: 1px solid #e1e5ee;
+      border-radius: 8px;
+      padding: 15px;
+      background-color: #f8f9fa;
+      min-height: 300px;
+      max-height: 400px;
+      overflow-y: auto;
     }
-    .empty-message {
+    
+    .empty-state {
       text-align: center;
-      color: #666;
-      margin-top: 20px;
+      color: #6c757d;
+      padding: 40px 20px;
+    }
+    
+    .empty-state i {
+      font-size: 3rem;
+      margin-bottom: 15px;
+      color: #adb5bd;
+    }
+    
+    .note {
+      background: white;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      border-left: 4px solid #4a00e0;
+      animation: fadeIn 0.5s ease;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .note-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 0.85rem;
+      color: #6c757d;
+    }
+    
+    .note-content {
+      font-size: 1rem;
+      line-height: 1.5;
+      word-break: break-word;
+    }
+    
+    .note-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 10px;
+    }
+    
+    .note-actions button {
+      padding: 5px 10px;
+      font-size: 0.8rem;
+      background: none;
+      color: #6c757d;
+    }
+    
+    .note-actions button:hover {
+      background: #f8f9fa;
+      transform: none;
+    }
+    
+    footer {
+      text-align: center;
+      padding: 15px;
+      background-color: #f8f9fa;
+      color: #6c757d;
+      font-size: 0.9rem;
+      border-top: 1px solid #e9ecef;
+    }
+    
+    @media (max-width: 600px) {
+      .container {
+        margin: 10px;
+      }
+      
+      h1 {
+        font-size: 1.8rem;
+      }
+      
+      .button-group {
+        flex-direction: column;
+      }
+      
+      .status-bar {
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
+      }
     }
   </style>
 </head>
 <body>
-  <h1>📒 Firebase Note Sharing</h1>
-  
-  <form id="noteForm">
-    <input type="text" id="noteInput" placeholder="Write a note..." required />
-    <button type="submit">Add</button>
-  </form>
-  
-  <div id="notes"></div>
-  <p id="emptyMessage" class="empty-message">No notes yet. Add one above!</p>
+  <div class="container">
+    <header>
+      <h1>Live Text Sharing</h1>
+      <p class="subtitle">Share text in real-time with anyone</p>
+    </header>
+    
+    <div class="status-bar">
+      <div class="status">
+        <div class="status-dot disconnected" id="statusDot"></div>
+        <span id="statusText">Connecting to Firebase...</span>
+      </div>
+      <div class="user-count">
+        <i class="fas fa-users"></i>
+        <span id="userCount">1 user online</span>
+      </div>
+    </div>
+    
+    <div class="main-content">
+      <div class="input-section">
+        <div class="input-container">
+          <textarea id="noteInput" placeholder="Type your message here..." maxlength="500"></textarea>
+          <div class="char-count"><span id="charCount">0</span>/500</div>
+        </div>
+        <div class="button-group">
+          <button class="primary-btn" id="shareBtn">
+            <i class="fas fa-paper-plane"></i> Share Note
+          </button>
+          <button class="secondary-btn" id="clearBtn">
+            <i class="fas fa-eraser"></i> Clear
+          </button>
+        </div>
+      </div>
+      
+      <div class="output-section" id="notes">
+        <div class="empty-state" id="emptyState">
+          <i class="fas fa-sticky-note"></i>
+          <h3>No notes yet</h3>
+          <p>Be the first to share a note!</p>
+        </div>
+      </div>
+    </div>
+    
+    <footer>
+      <p>Live Text Sharing System &copy; 2023 | Powered by Firebase</p>
+    </footer>
+  </div>
 
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
   
   <script>
-    // Firebase Config
+    // Firebase configuration
     const firebaseConfig = {
       apiKey: "AIzaSyD0T-mS__FlN3QASJnmD0K6S5VNDiN2bxQ",
       authDomain: "poplol-7209f.firebaseapp.com",
       projectId: "poplol-7209f",
-      storageBucket: "poplol-7209f.appspot.com",
+      storageBucket: "poplol-720f.appspot.com",
       messagingSenderId: "105810834",
       appId: "1:105810834:web:example"
     };
@@ -112,66 +334,134 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
+    // DOM elements
     const noteForm = document.getElementById("noteForm");
     const noteInput = document.getElementById("noteInput");
     const notesDiv = document.getElementById("notes");
-    const emptyMessage = document.getElementById("emptyMessage");
+    const shareBtn = document.getElementById("shareBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const emptyState = document.getElementById("emptyState");
+    const statusDot = document.getElementById("statusDot");
+    const statusText = document.getElementById("statusText");
+    const charCount = document.getElementById("charCount");
+    const userCount = document.getElementById("userCount");
 
-    // Add Note
-    noteForm.addEventListener("submit", async (e) => {
+    // Character counter
+    noteInput.addEventListener("input", () => {
+      charCount.textContent = noteInput.value.length;
+    });
+
+    // Share note function
+    shareBtn.addEventListener("click", async (e) => {
       e.preventDefault();
       const note = noteInput.value.trim();
-      if(note){
+      if (note) {
         try {
           await db.collection("notes").add({
             text: note,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
           });
           noteInput.value = "";
+          charCount.textContent = "0";
         } catch (error) {
-          alert("Error adding note: " + error.message);
+          console.error("Error adding note: ", error);
+          alert("Error sharing note. Please try again.");
         }
+      } else {
+        alert("Please enter a note to share.");
       }
     });
 
-    // Delete Note
-    async function deleteNote(id) {
-      if(confirm("Delete this note?")) {
-        try {
-          await db.collection("notes").doc(id).delete();
-        } catch (error) {
-          alert("Error deleting note: " + error.message);
-        }
-      }
-    }
+    // Clear input
+    clearBtn.addEventListener("click", () => {
+      noteInput.value = "";
+      charCount.textContent = "0";
+      noteInput.focus();
+    });
 
-    // Show Notes in Real-time
-    db.collection("notes").orderBy("timestamp","desc").onSnapshot(snapshot => {
-      notesDiv.innerHTML = "";
-      if(snapshot.empty){
-        emptyMessage.style.display = "block";
+    // Show notes in real-time
+    db.collection("notes").orderBy("timestamp", "desc").onSnapshot(snapshot => {
+      // Hide empty state if there are notes
+      if (!snapshot.empty) {
+        emptyState.style.display = "none";
       } else {
-        emptyMessage.style.display = "none";
+        emptyState.style.display = "block";
       }
+      
+      notesDiv.innerHTML = "";
+      if (!snapshot.empty) {
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          const div = document.createElement("div");
+          div.classList.add("note");
+          
+          // Format timestamp
+          let timeString = "Just now";
+          if (data.timestamp) {
+            const date = data.timestamp.toDate();
+            timeString = date.toLocaleString();
+          }
+          
+          div.innerHTML = `
+            <div class="note-header">
+              <span>${timeString}</span>
+            </div>
+            <div class="note-content">${data.text}</div>
+            <div class="note-actions">
+              <button class="delete-btn" data-id="${doc.id}">
+                <i class="fas fa-trash"></i> Delete
+              </button>
+            </div>
+          `;
+          notesDiv.appendChild(div);
+        });
+        
+        // Add delete functionality
+        document.querySelectorAll('.delete-btn').forEach(button => {
+          button.addEventListener('click', async (e) => {
+            const noteId = e.currentTarget.getAttribute('data-id');
+            if (confirm("Are you sure you want to delete this note?")) {
+              try {
+                await db.collection("notes").doc(noteId).delete();
+              } catch (error) {
+                console.error("Error deleting note: ", error);
+                alert("Error deleting note. Please try again.");
+              }
+            }
+          });
+        });
+      } else {
+        notesDiv.appendChild(emptyState);
+      }
+    }, error => {
+      console.error("Error fetching notes: ", error);
+      statusDot.className = "status-dot disconnected";
+      statusText.textContent = "Error connecting to Firebase";
+    });
 
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        const div = document.createElement("div");
-        div.classList.add("note");
-
-        const span = document.createElement("span");
-        span.classList.add("note-text");
-        span.textContent = data.text;
-
-        const delBtn = document.createElement("button");
-        delBtn.classList.add("delete-btn");
-        delBtn.textContent = "Delete";
-        delBtn.onclick = () => deleteNote(doc.id);
-
-        div.appendChild(span);
-        div.appendChild(delBtn);
-        notesDiv.appendChild(div);
+    // Update connection status
+    db.enableNetwork()
+      .then(() => {
+        statusDot.className = "status-dot connected";
+        statusText.textContent = "Connected to Firebase";
+      })
+      .catch((error) => {
+        statusDot.className = "status-dot disconnected";
+        statusText.textContent = "Disconnected from Firebase";
       });
+
+    // Simulate user count (in a real app, you would track this in Firebase)
+    let onlineUsers = 1;
+    setInterval(() => {
+      onlineUsers = 1 + Math.floor(Math.random() * 5);
+      userCount.textContent = `${onlineUsers} user${onlineUsers !== 1 ? 's' : ''} online`;
+    }, 5000);
+
+    // Allow submitting with Ctrl+Enter
+    noteInput.addEventListener("keydown", (e) => {
+      if (e.ctrlKey && e.key === "Enter") {
+        shareBtn.click();
+      }
     });
   </script>
 </body>
