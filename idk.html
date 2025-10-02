@@ -1,206 +1,408 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Firebase Notes — Simple App</title>
-  <style>
-    :root{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#111}
-    body{margin:0;padding:28px;background:#f7f8fa}
-    .container{max-width:900px;margin:0 auto;background:#fff;border-radius:12px;padding:24px;box-shadow:0 6px 24px rgba(22,27,34,0.08)}
-    h1{margin:0 0 12px;font-size:20px}
-    .row{display:flex;gap:12px;align-items:center}
-    input,textarea,button{font:inherit;padding:10px;border:1px solid #e6e8eb;border-radius:8px}
-    input[type=email],input[type=password]{width:220px}
-    textarea{width:100%;min-height:72px}
-    .notes{margin-top:18px}
-    .note{padding:12px;border:1px solid #eef0f3;border-radius:8px;margin-bottom:10px;background:#fdfdfd}
-    .meta{font-size:12px;color:#666;margin-bottom:6px}
-    .actions{margin-left:auto}
-    .muted{color:#7a7f87;font-size:13px}
-    .center{display:flex;align-items:center;gap:8px}
-    .hidden{display:none}
-    .signout{background:#fff;border:1px solid #e6e8eb;padding:8px 12px;border-radius:8px}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase Authentication Project</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 400px;
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        .form-container {
+            padding: 30px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #6a11cb;
+            box-shadow: 0 0 0 2px rgba(106, 17, 203, 0.2);
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(106, 17, 203, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .toggle-form {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+
+        .toggle-form a {
+            color: #6a11cb;
+            text-decoration: none;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .toggle-form a:hover {
+            text-decoration: underline;
+        }
+
+        .message {
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            text-align: center;
+            display: none;
+        }
+
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .dashboard {
+            display: none;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .user-info {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .logout-btn {
+            background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+            margin-top: 10px;
+        }
+
+        .loader {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .loader:after {
+            content: " ";
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 3px solid #6a11cb;
+            border-color: #6a11cb transparent #6a11cb transparent;
+            animation: loader 1.2s linear infinite;
+        }
+
+        @keyframes loader {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                max-width: 100%;
+            }
+            
+            .form-container {
+                padding: 20px;
+            }
+        }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <div class="row">
-      <h1>Firebase Notes — Simple Project</h1>
-      <div class="actions" id="auth-actions"></div>
+    <div class="container">
+        <!-- Login Form -->
+        <div class="form-container" id="login-container">
+            <h1>Welcome Back</h1>
+            <p class="subtitle">Sign in to your account</p>
+            
+            <div class="message" id="login-message"></div>
+            
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="login-email">Email</label>
+                    <input type="email" id="login-email" placeholder="Enter your email" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" placeholder="Enter your password" required>
+                </div>
+                
+                <div class="loader" id="login-loader"></div>
+                
+                <button type="submit">Sign In</button>
+            </form>
+            
+            <div class="toggle-form">
+                Don't have an account? <a id="show-signup">Sign Up</a>
+            </div>
+        </div>
+        
+        <!-- Signup Form -->
+        <div class="form-container" id="signup-container" style="display: none;">
+            <h1>Create Account</h1>
+            <p class="subtitle">Sign up for a new account</p>
+            
+            <div class="message" id="signup-message"></div>
+            
+            <form id="signup-form">
+                <div class="form-group">
+                    <label for="signup-name">Full Name</label>
+                    <input type="text" id="signup-name" placeholder="Enter your full name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="signup-email">Email</label>
+                    <input type="email" id="signup-email" placeholder="Enter your email" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="signup-password">Password</label>
+                    <input type="password" id="signup-password" placeholder="Create a password" required>
+                </div>
+                
+                <div class="loader" id="signup-loader"></div>
+                
+                <button type="submit">Sign Up</button>
+            </form>
+            
+            <div class="toggle-form">
+                Already have an account? <a id="show-login">Sign In</a>
+            </div>
+        </div>
+        
+        <!-- Dashboard -->
+        <div class="dashboard" id="dashboard">
+            <h1>Welcome to Your Dashboard</h1>
+            <p class="subtitle">You have successfully logged in</p>
+            
+            <div class="user-info">
+                <h3 id="user-name">User Name</h3>
+                <p id="user-email">user@example.com</p>
+            </div>
+            
+            <button class="logout-btn" id="logout-btn">Log Out</button>
+        </div>
     </div>
 
-    <!-- Auth UI -->
-    <div id="auth-ui">
-      <p class="muted">Create an account or sign in with email/password.</p>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
-        <input id="email" type="email" placeholder="Email" />
-        <input id="password" type="password" placeholder="Password" />
-        <button id="signup">Sign up</button>
-        <button id="signin">Sign in</button>
-      </div>
-    </div>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDrHe4VwIFCyUI4u8-WwbcncSppJqf7AW4",
+            authDomain: "new-1-15bbf.firebaseapp.com",
+            projectId: "new-1-15bbf",
+            storageBucket: "new-1-15bbf.firebasestorage.app",
+            messagingSenderId: "25831911925",
+            appId: "1:25831911925:web:bf664020e248a5f239f0bc",
+            measurementId: "G-KY3MJVJ0EM"
+        };
 
-    <!-- App UI -->
-    <div id="app-ui" class="hidden">
-      <div class="row" style="margin-bottom:12px">
-        <div class="center">
-          <strong id="user-email"></strong>
-          <span class="muted" id="user-uid"></span>
-        </div>
-        <div class="actions">
-          <button id="signout" class="signout">Sign out</button>
-        </div>
-      </div>
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
 
-      <form id="note-form">
-        <textarea id="note-text" placeholder="Write a note... (max 500 chars)" maxlength="500"></textarea>
-        <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
-          <input id="note-title" placeholder="Optional title" />
-          <button type="submit">Save note</button>
-        </div>
-      </form>
+        // DOM Elements
+        const loginContainer = document.getElementById('login-container');
+        const signupContainer = document.getElementById('signup-container');
+        const dashboard = document.getElementById('dashboard');
+        const loginForm = document.getElementById('login-form');
+        const signupForm = document.getElementById('signup-form');
+        const showSignup = document.getElementById('show-signup');
+        const showLogin = document.getElementById('show-login');
+        const logoutBtn = document.getElementById('logout-btn');
+        const loginMessage = document.getElementById('login-message');
+        const signupMessage = document.getElementById('signup-message');
+        const loginLoader = document.getElementById('login-loader');
+        const signupLoader = document.getElementById('signup-loader');
+        const userName = document.getElementById('user-name');
+        const userEmail = document.getElementById('user-email');
 
-      <div class="notes" id="notes-list">
-        <p class="muted">Loading notes...</p>
-      </div>
-    </div>
-
-    <p class="muted" style="margin-top:18px">Notes are stored in Firestore. Make sure Email/Password auth and Firestore are enabled in your Firebase console.</p>
-  </div>
-
-  <!-- Firebase (compat) SDKs from CDN -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-
-  <script>
-    // --- Firebase config (use the config the user provided) ---
-    const firebaseConfig = {
-      apiKey: "AIzaSyDrHe4VwIFCyUI4u8-WwbcncSppJqf7AW4",
-      authDomain: "new-1-15bbf.firebaseapp.com",
-      projectId: "new-1-15bbf",
-      storageBucket: "new-1-15bbf.firebasestorage.app",
-      messagingSenderId: "25831911925",
-      appId: "1:25831911925:web:bf664020e248a5f239f0bc",
-      measurementId: "G-KY3MJVJ0EM"
-    };
-
-    // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.firestore();
-
-    // UI refs
-    const authUI = document.getElementById('auth-ui');
-    const appUI = document.getElementById('app-ui');
-    const emailIn = document.getElementById('email');
-    const passIn = document.getElementById('password');
-    const signupBtn = document.getElementById('signup');
-    const signinBtn = document.getElementById('signin');
-    const signoutBtn = document.getElementById('signout');
-    const userEmailLabel = document.getElementById('user-email');
-    const userUidLabel = document.getElementById('user-uid');
-    const noteForm = document.getElementById('note-form');
-    const noteText = document.getElementById('note-text');
-    const noteTitle = document.getElementById('note-title');
-    const notesList = document.getElementById('notes-list');
-
-    // Sign up
-    signupBtn.addEventListener('click', async () => {
-      const email = emailIn.value.trim();
-      const password = passIn.value;
-      if (!email || !password) return alert('Provide email and password');
-      try {
-        await auth.createUserWithEmailAndPassword(email, password);
-      } catch (err) {
-        alert('Sign up error: ' + err.message);
-      }
-    });
-
-    // Sign in
-    signinBtn.addEventListener('click', async () => {
-      const email = emailIn.value.trim();
-      const password = passIn.value;
-      if (!email || !password) return alert('Provide email and password');
-      try {
-        await auth.signInWithEmailAndPassword(email, password);
-      } catch (err) {
-        alert('Sign in error: ' + err.message);
-      }
-    });
-
-    // Sign out
-    signoutBtn.addEventListener('click', () => auth.signOut());
-
-    // Auth state
-    let unsubscribeNotes = null;
-    auth.onAuthStateChanged(user => {
-      if (user) {
-        authUI.classList.add('hidden');
-        appUI.classList.remove('hidden');
-        userEmailLabel.textContent = user.email || 'Anonymous';
-        userUidLabel.textContent = ' — ' + user.uid;
-        // Start listening to notes
-        if (unsubscribeNotes) unsubscribeNotes();
-        const notesRef = db.collection('notes').orderBy('createdAt', 'desc').limit(100);
-        unsubscribeNotes = notesRef.onSnapshot(snapshot => {
-          renderNotes(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+        // Show/Hide Forms
+        showSignup.addEventListener('click', () => {
+            loginContainer.style.display = 'none';
+            signupContainer.style.display = 'block';
+            clearMessages();
         });
-      } else {
-        authUI.classList.remove('hidden');
-        appUI.classList.add('hidden');
-        userEmailLabel.textContent = '';
-        userUidLabel.textContent = '';
-        if (unsubscribeNotes) { unsubscribeNotes(); unsubscribeNotes = null; }
-      }
-    });
 
-    // Add note
-    noteForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const text = noteText.value.trim();
-      const title = noteTitle.value.trim();
-      const user = auth.currentUser;
-      if (!user) return alert('You must be signed in');
-      if (!text) return alert('Note cannot be empty');
-      try {
-        await db.collection('notes').add({
-          uid: user.uid,
-          email: user.email || null,
-          title: title || null,
-          text,
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        showLogin.addEventListener('click', () => {
+            signupContainer.style.display = 'none';
+            loginContainer.style.display = 'block';
+            clearMessages();
         });
-        noteText.value = '';
-        noteTitle.value = '';
-      } catch (err) {
-        alert('Error saving note: ' + err.message);
-      }
-    });
 
-    // Render notes
-    function renderNotes(items) {
-      if (!items.length) {
-        notesList.innerHTML = '<p class="muted">No notes yet. Add one!</p>';
-        return;
-      }
-      notesList.innerHTML = items.map(i => {
-        const time = i.createdAt && i.createdAt.toDate ? i.createdAt.toDate().toLocaleString() : '';
-        return `
-          <div class="note">
-            <div class="meta"><strong>${escapeHtml(i.title || '')}</strong> <span class="muted">${i.email ? 'by ' + escapeHtml(i.email) : ''} ${time ? ' • ' + escapeHtml(time) : ''}</span></div>
-            <div>${escapeHtml(i.text)}</div>
-          </div>
-        `;
-      }).join('');
-    }
+        // Clear message displays
+        function clearMessages() {
+            loginMessage.style.display = 'none';
+            signupMessage.style.display = 'none';
+        }
 
-    // Basic HTML escape
-    function escapeHtml(s){ if(!s) return ''; return s.replace(/[&<>\"']/g, c=>({
-      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-    }[c])); }
+        // Show message
+        function showMessage(element, message, type) {
+            element.textContent = message;
+            element.className = `message ${type}`;
+            element.style.display = 'block';
+        }
 
-  </script>
+        // Login
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            
+            loginLoader.style.display = 'block';
+            
+            auth.signInWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    // Signed in
+                    loginLoader.style.display = 'none';
+                    showDashboard(userCredential.user);
+                })
+                .catch((error) => {
+                    loginLoader.style.display = 'none';
+                    const errorMessage = error.message;
+                    showMessage(loginMessage, errorMessage, 'error');
+                });
+        });
+
+        // Signup
+        signupForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const name = document.getElementById('signup-name').value;
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+            
+            signupLoader.style.display = 'block';
+            
+            auth.createUserWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    // Signed up
+                    signupLoader.style.display = 'none';
+                    
+                    // Update user profile with name
+                    return userCredential.user.updateProfile({
+                        displayName: name
+                    }).then(() => {
+                        showDashboard(userCredential.user);
+                    });
+                })
+                .catch((error) => {
+                    signupLoader.style.display = 'none';
+                    const errorMessage = error.message;
+                    showMessage(signupMessage, errorMessage, 'error');
+                });
+        });
+
+        // Logout
+        logoutBtn.addEventListener('click', () => {
+            auth.signOut().then(() => {
+                loginContainer.style.display = 'block';
+                dashboard.style.display = 'none';
+                clearMessages();
+                loginForm.reset();
+                signupForm.reset();
+            });
+        });
+
+        // Show Dashboard
+        function showDashboard(user) {
+            loginContainer.style.display = 'none';
+            signupContainer.style.display = 'none';
+            dashboard.style.display = 'block';
+            
+            userName.textContent = user.displayName || 'User';
+            userEmail.textContent = user.email;
+        }
+
+        // Check if user is already logged in
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                showDashboard(user);
+            }
+        });
+    </script>
 </body>
 </html>
