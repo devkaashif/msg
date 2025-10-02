@@ -1,298 +1,470 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>2D Multiplayer — Firebase Firestore (single file)</title>
-  <style>
-    :root{--bg:#0f1724;--panel:#0b1220;--muted:#93a0b3}
-    html,body{height:100%;margin:0;font-family:Inter, system-ui, Arial;background:var(--bg);color:#e6eef6}
-    #wrap{display:flex;height:100vh;gap:16px;padding:16px;box-sizing:border-box}
-    #game{flex:1;display:flex;flex-direction:column}
-    canvas{background:linear-gradient(180deg,#071021, #0b1220);border-radius:8px;display:block;width:100%;height:100%}
-    #hud{display:flex;gap:12px;margin-top:8px}
-    .panel{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:12px;border-radius:8px;min-width:200px}
-    #playersList{max-height:50vh;overflow:auto;font-size:14px}
-    .playerRow{display:flex;align-items:center;gap:8px;padding:6px 0}
-    .dot{width:14px;height:14px;border-radius:50%}
-    #instructions{color:var(--muted);font-size:13px;margin-top:8px}
-    button{background:#1f6feb;border:none;color:white;padding:8px 10px;border-radius:6px;cursor:pointer}
-    button.secondary{background:#3b4754}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2D Multiplayer Game</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: white;
+            overflow: hidden;
+        }
+        
+        .game-container {
+            position: relative;
+            width: 800px;
+            height: 500px;
+            border: 3px solid rgba(255, 255, 255, 0.7);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            background-color: rgba(0, 0, 0, 0.3);
+        }
+        
+        #gameCanvas {
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        
+        .player {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            text-shadow: 1px 1px 2px black;
+            transition: transform 0.1s;
+        }
+        
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 15px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid white;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .info-panel {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            width: 800px;
+            text-align: center;
+        }
+        
+        .player-count {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        
+        .instructions {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        
+        .player-name {
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            white-space: nowrap;
+        }
+        
+        .login-panel {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            z-index: 10;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.7);
+        }
+        
+        input {
+            padding: 10px;
+            margin: 10px 0;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            width: 200px;
+        }
+        
+        input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        h1 {
+            margin-top: 0;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+    </style>
 </head>
 <body>
-  <div id="wrap">
-    <div id="game">
-      <canvas id="c"></canvas>
-      <div id="hud">
-        <div class="panel" style="flex:0 0 260px">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div>
-              <strong id="meName">Player</strong>
-              <div id="meId" style="font-size:12px;color:var(--muted)"></div>
-            </div>
-            <div>
-              <button id="recenterBtn">Recenter</button>
-            </div>
-          </div>
-          <div id="instructions">Move with WASD or arrow keys. Close the tab to leave. This demo uses Firestore and anonymous auth.</div>
+    <h1>2D Multiplayer Arena</h1>
+    
+    <div class="game-container">
+        <canvas id="gameCanvas" width="800" height="500"></canvas>
+        <div id="playersContainer"></div>
+        
+        <div class="login-panel" id="loginPanel">
+            <h2>Join the Game</h2>
+            <input type="text" id="playerNameInput" placeholder="Enter your name" maxlength="15">
+            <br>
+            <button id="joinGameBtn">Join Game</button>
         </div>
-        <div class="panel" style="flex:0 0 220px">
-          <div style="font-weight:600;margin-bottom:6px">Players</div>
-          <div id="playersList"></div>
-          <div style="margin-top:8px;display:flex;gap:8px">
-            <button id="changeColorBtn">Change Color</button>
-            <button class="secondary" id="respawnBtn">Respawn</button>
-          </div>
-        </div>
-      </div>
     </div>
-  </div>
+    
+    <div class="controls">
+        <button id="upBtn">↑ Up</button>
+        <button id="leftBtn">← Left</button>
+        <button id="downBtn">↓ Down</button>
+        <button id="rightBtn">→ Right</button>
+        <button id="leaveBtn">Leave Game</button>
+    </div>
+    
+    <div class="info-panel">
+        <div class="player-count">Players Online: <span id="playerCount">0</span></div>
+        <div class="instructions">Use arrow buttons or WASD keys to move. Collect coins to increase your score!</div>
+    </div>
 
-  <!-- Firebase compat libs (v9 compat) -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDrHe4VwIFCyUI4u8-WwbcncSppJqf7AW4",
+            authDomain: "new-1-15bbf.firebaseapp.com",
+            projectId: "new-1-15bbf",
+            storageBucket: "new-1-15bbf.firebasestorage.app",
+            messagingSenderId: "25831911925",
+            appId: "1:25831911925:web:bf664020e248a5f239f0bc",
+            measurementId: "G-KY3MJVJ0EM"
+        };
 
-  <script>
-  // ----- Paste your firebaseConfig here (you already provided it) -----
-  const firebaseConfig = {
-    apiKey: "AIzaSyDrHe4VwIFCyUI4u8-WwbcncSppJqf7AW4",
-    authDomain: "new-1-15bbf.firebaseapp.com",
-    projectId: "new-1-15bbf",
-    storageBucket: "new-1-15bbf.firebasestorage.app",
-    messagingSenderId: "25831911925",
-    appId: "1:25831911925:web:bf664020e248a5f239f0bc",
-    measurementId: "G-KY3MJVJ0EM"
-  };
-  // -------------------------------------------------------------------
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
 
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.firestore();
-
-  // Game state
-  const canvas = document.getElementById('c');
-  const ctx = canvas.getContext('2d');
-  let W = 800, H = 600;
-  const playerSize = 28;
-
-  // local player data
-  let me = { id: null, name: null, x: 0, y: 0, color: null, alive: true };
-  const players = new Map(); // id -> player
-
-  // input
-  const keys = {};
-  window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
-  window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
-
-  // DOM
-  const playersListEl = document.getElementById('playersList');
-  const meNameEl = document.getElementById('meName');
-  const meIdEl = document.getElementById('meId');
-  document.getElementById('recenterBtn').onclick = () => centerOnMe();
-  document.getElementById('changeColorBtn').onclick = () => {
-    me.color = randomColor(); updateMyDoc();
-  };
-  document.getElementById('respawnBtn').onclick = () => {
-    me.x = Math.random()*2000 - 1000; me.y = Math.random()*2000 - 1000; me.alive = true; updateMyDoc();
-  }
-
-  // helper
-  function randomColor(){
-    const hue = Math.floor(Math.random()*360);
-    return `hsl(${hue} 80% 60%)`;
-  }
-
-  function resize(){
-    const ratio = devicePixelRatio || 1;
-    W = canvas.clientWidth = canvas.parentElement.clientWidth;
-    H = canvas.clientHeight = Math.max(300, window.innerHeight - 220);
-    canvas.width = Math.floor(W * ratio);
-    canvas.height = Math.floor(H * ratio);
-    ctx.setTransform(ratio,0,0,ratio,0,0);
-  }
-  window.addEventListener('resize', resize);
-  resize();
-
-  // sign in anonymously, then create player doc
-  auth.signInAnonymously().then(({user}) => {
-    me.id = user.uid;
-    me.name = 'P-' + me.id.slice(0,5);
-    me.color = randomColor();
-    me.x = Math.random()*2000 - 1000;
-    me.y = Math.random()*2000 - 1000;
-    me.alive = true;
-
-    meNameEl.textContent = me.name;
-    meIdEl.textContent = me.id;
-
-    // create or overwrite our doc
-    createMyDoc().then(() => {
-      // listen for all players
-      db.collection('players').onSnapshot(onPlayersSnapshot, err => console.error(err));
-    });
-
-    // remove doc when closing tab
-    window.addEventListener('beforeunload', () => {
-      db.collection('players').doc(me.id).delete().catch(()=>{});
-    });
-
-    startLoop();
-  }).catch(err => {
-    alert('Firebase auth failed: ' + err.message);
-    console.error(err);
-  });
-
-  function createMyDoc(){
-    return db.collection('players').doc(me.id).set({
-      id: me.id,
-      name: me.name,
-      x: me.x,
-      y: me.y,
-      color: me.color,
-      alive: me.alive,
-      ts: firebase.firestore.FieldValue.serverTimestamp()
-    });
-  }
-
-  // update doc (throttled)
-  let lastUpdate = 0;
-  function updateMyDoc(){
-    const now = performance.now();
-    if(now - lastUpdate < 50) return; // ~20 updates/sec
-    lastUpdate = now;
-    db.collection('players').doc(me.id).set({
-      id: me.id,
-      name: me.name,
-      x: me.x,
-      y: me.y,
-      color: me.color,
-      alive: me.alive,
-      ts: firebase.firestore.FieldValue.serverTimestamp()
-    }, {merge:true}).catch(err=>console.error('update err',err));
-  }
-
-  function onPlayersSnapshot(snapshot){
-    snapshot.docChanges().forEach(change => {
-      const doc = change.doc.data();
-      if(change.type === 'added' || change.type === 'modified'){
-        players.set(doc.id, doc);
-      } else if(change.type === 'removed'){
-        players.delete(doc.id);
-      }
-    });
-    renderPlayersList();
-  }
-
-  function renderPlayersList(){
-    playersListEl.innerHTML = '';
-    Array.from(players.values()).sort((a,b)=>a.name.localeCompare(b.name)).forEach(p => {
-      const row = document.createElement('div'); row.className='playerRow';
-      const dot = document.createElement('div'); dot.className='dot'; dot.style.background = p.color || '#888';
-      const label = document.createElement('div'); label.textContent = p.name + (p.id===me.id? ' (you)':'');
-      row.appendChild(dot); row.appendChild(label);
-      playersListEl.appendChild(row);
-    });
-  }
-
-  // camera
-  let camX = 0, camY = 0;
-  function centerOnMe(){ camX = me.x - W/2; camY = me.y - H/2; }
-
-  // game loop
-  let lastFrame = performance.now();
-  function startLoop(){
-    requestAnimationFrame(loop);
-  }
-
-  function loop(ts){
-    const dt = Math.min(50, ts - lastFrame);
-    lastFrame = ts;
-
-    // update local player with input
-    const speed = 0.28 * dt; // pixels per ms
-    let dx = 0, dy = 0;
-    if(keys['arrowup']||keys['w']) dy -= 1;
-    if(keys['arrowdown']||keys['s']) dy += 1;
-    if(keys['arrowleft']||keys['a']) dx -= 1;
-    if(keys['arrowright']||keys['d']) dx += 1;
-    if(dx!==0 || dy!==0){
-      const len = Math.hypot(dx,dy) || 1;
-      me.x += (dx/len) * speed * 60; // normalized and scaled to look smooth
-      me.y += (dy/len) * speed * 60;
-      updateMyDoc();
-    }
-
-    // simple idle auto-center following
-    camX += (me.x - W/2 - camX) * 0.08;
-    camY += (me.y - H/2 - camY) * 0.08;
-
-    render();
-    requestAnimationFrame(loop);
-  }
-
-  function render(){
-    // clear
-    ctx.clearRect(0,0,W,H);
-
-    // draw grid
-    const gridSize = 64;
-    ctx.save();
-    ctx.translate(-camX % gridSize, -camY % gridSize);
-    ctx.globalAlpha = 0.08;
-    for(let x=-gridSize;x<=W+gridSize;x+=gridSize){
-      ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke();
-    }
-    for(let y=-gridSize;y<=H+gridSize;y+=gridSize){
-      ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
-    }
-    ctx.restore();
-    ctx.globalAlpha = 1;
-
-    // draw all players
-    players.forEach(p => {
-      drawPlayer(p);
-    });
-
-    // highlight me
-    if(players.has(me.id)){
-      const p = players.get(me.id);
-      ctx.save();
-      ctx.strokeStyle = '#fff'; ctx.lineWidth=2; ctx.globalAlpha=0.6;
-      const sx = p.x - camX, sy = p.y - camY;
-      ctx.beginPath(); ctx.ellipse(sx, sy, playerSize/1.6, playerSize/1.6, 0, 0, Math.PI*2); ctx.stroke();
-      ctx.restore();
-    }
-  }
-
-  function drawPlayer(p){
-    const x = p.x - camX, y = p.y - camY;
-    ctx.save();
-    ctx.translate(x,y);
-    // shadow
-    ctx.globalAlpha = 0.12; ctx.beginPath(); ctx.ellipse(0, playerSize*0.6, playerSize*0.9, playerSize*0.4, 0, 0, Math.PI*2); ctx.fillStyle = '#000'; ctx.fill();
-    ctx.globalAlpha = 1;
-    // body
-    ctx.beginPath(); ctx.fillStyle = p.color || '#888'; ctx.rect(-playerSize/2, -playerSize/2, playerSize, playerSize); ctx.fill();
-    // name tag
-    ctx.font = '12px system-ui, Arial'; ctx.textAlign='center'; ctx.fillStyle = '#fff'; ctx.fillText(p.name, 0, -playerSize);
-    ctx.restore();
-  }
-
-  // listen to remote changes but keep our own local me consistent if we haven't yet created doc
-  db.collection('players').onSnapshot(()=>{}, ()=>{}); // ensure listener remains active (we set proper listener after sign-in)
-
-  // convenience: if user closes without delete, remove stale players older than 5 minutes (optional)
-  // Note: this cleanup requires a server or Cloud Function for robust removal in production. For demo, we won't run cleanup here.
-
-  // center on me initially when we know position
-  function initialCenterWhenReady(){
-    if(me.id){ centerOnMe(); } else setTimeout(initialCenterWhenReady,200);
-  }
-  initialCenterWhenReady();
-
-  </script>
-
+        // Game variables
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const playersContainer = document.getElementById('playersContainer');
+        const playerCountElement = document.getElementById('playerCount');
+        const loginPanel = document.getElementById('loginPanel');
+        const playerNameInput = document.getElementById('playerNameInput');
+        const joinGameBtn = document.getElementById('joinGameBtn');
+        const leaveBtn = document.getElementById('leaveBtn');
+        
+        let playerId = null;
+        let playerName = '';
+        let players = {};
+        let coins = [];
+        let myPlayer = {
+            x: 400,
+            y: 250,
+            color: '#3498db',
+            score: 0,
+            name: ''
+        };
+        
+        // Generate random coins
+        function generateCoins() {
+            coins = [];
+            for (let i = 0; i < 20; i++) {
+                coins.push({
+                    x: Math.random() * (canvas.width - 20) + 10,
+                    y: Math.random() * (canvas.height - 20) + 10,
+                    collected: false
+                });
+            }
+        }
+        
+        // Draw coins on canvas
+        function drawCoins() {
+            ctx.fillStyle = '#f1c40f';
+            for (let coin of coins) {
+                if (!coin.collected) {
+                    ctx.beginPath();
+                    ctx.arc(coin.x, coin.y, 8, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = '#e67e22';
+                    ctx.beginPath();
+                    ctx.arc(coin.x, coin.y, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#f1c40f';
+                }
+            }
+        }
+        
+        // Draw game background
+        function drawBackground() {
+            // Draw grid
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 1;
+            
+            for (let x = 0; x < canvas.width; x += 50) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            
+            for (let y = 0; y < canvas.height; y += 50) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+            
+            // Draw border
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(0, 0, canvas.width, canvas.height);
+        }
+        
+        // Draw game
+        function drawGame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawBackground();
+            drawCoins();
+            
+            // Draw player scores
+            ctx.fillStyle = 'white';
+            ctx.font = '16px Arial';
+            ctx.textAlign = 'left';
+            let yPos = 30;
+            
+            for (let id in players) {
+                const player = players[id];
+                ctx.fillText(`${player.name}: ${player.score}`, 20, yPos);
+                yPos += 25;
+            }
+        }
+        
+        // Update player position in Firebase
+        function updatePlayerPosition() {
+            if (playerId) {
+                database.ref('players/' + playerId).update({
+                    x: myPlayer.x,
+                    y: myPlayer.y,
+                    color: myPlayer.color,
+                    score: myPlayer.score,
+                    name: myPlayer.name,
+                    lastUpdate: firebase.database.ServerValue.TIMESTAMP
+                });
+            }
+        }
+        
+        // Check for coin collection
+        function checkCoinCollection() {
+            for (let i = 0; i < coins.length; i++) {
+                const coin = coins[i];
+                if (!coin.collected) {
+                    const dx = myPlayer.x - coin.x;
+                    const dy = myPlayer.y - coin.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < 25) { // Player radius + coin radius
+                        coin.collected = true;
+                        myPlayer.score += 10;
+                        
+                        // Update score in Firebase
+                        if (playerId) {
+                            database.ref('players/' + playerId).update({
+                                score: myPlayer.score
+                            });
+                        }
+                        
+                        // Respawn coin after a delay
+                        setTimeout(() => {
+                            coin.x = Math.random() * (canvas.width - 20) + 10;
+                            coin.y = Math.random() * (canvas.height - 20) + 10;
+                            coin.collected = false;
+                        }, 2000);
+                    }
+                }
+            }
+        }
+        
+        // Join game
+        joinGameBtn.addEventListener('click', () => {
+            playerName = playerNameInput.value.trim();
+            if (playerName === '') {
+                playerName = 'Player' + Math.floor(Math.random() * 1000);
+            }
+            
+            myPlayer.name = playerName;
+            myPlayer.color = `hsl(${Math.random() * 360}, 70%, 60%)`;
+            
+            // Create player in Firebase
+            const playerRef = database.ref('players').push();
+            playerId = playerRef.key;
+            
+            playerRef.set({
+                x: myPlayer.x,
+                y: myPlayer.y,
+                color: myPlayer.color,
+                score: 0,
+                name: myPlayer.name,
+                lastUpdate: firebase.database.ServerValue.TIMESTAMP
+            });
+            
+            loginPanel.style.display = 'none';
+            
+            // Start game loop
+            setInterval(gameLoop, 1000 / 60);
+        });
+        
+        // Leave game
+        leaveBtn.addEventListener('click', () => {
+            if (playerId) {
+                database.ref('players/' + playerId).remove();
+                playerId = null;
+                loginPanel.style.display = 'block';
+                
+                // Clear players
+                players = {};
+                playersContainer.innerHTML = '';
+                playerCountElement.textContent = '0';
+            }
+        });
+        
+        // Game loop
+        function gameLoop() {
+            checkCoinCollection();
+            updatePlayerPosition();
+            drawGame();
+        }
+        
+        // Listen for other players
+        database.ref('players').on('value', (snapshot) => {
+            players = snapshot.val() || {};
+            
+            // Update player count
+            playerCountElement.textContent = Object.keys(players).length;
+            
+            // Clear existing player elements
+            playersContainer.innerHTML = '';
+            
+            // Create player elements
+            for (let id in players) {
+                const player = players[id];
+                
+                // Skip our own player (we'll handle it separately)
+                if (id === playerId) continue;
+                
+                // Remove inactive players (more than 5 seconds since last update)
+                if (Date.now() - player.lastUpdate > 5000) {
+                    database.ref('players/' + id).remove();
+                    continue;
+                }
+                
+                const playerElement = document.createElement('div');
+                playerElement.className = 'player';
+                playerElement.style.backgroundColor = player.color;
+                playerElement.style.left = (player.x - 15) + 'px';
+                playerElement.style.top = (player.y - 15) + 'px';
+                playerElement.textContent = player.score;
+                
+                const nameElement = document.createElement('div');
+                nameElement.className = 'player-name';
+                nameElement.textContent = player.name;
+                playerElement.appendChild(nameElement);
+                
+                playersContainer.appendChild(playerElement);
+            }
+        });
+        
+        // Movement controls
+        const moveSpeed = 5;
+        const keys = {};
+        
+        window.addEventListener('keydown', (e) => {
+            keys[e.key] = true;
+        });
+        
+        window.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+        
+        // Button controls
+        document.getElementById('upBtn').addEventListener('mousedown', () => keys['ArrowUp'] = true);
+        document.getElementById('upBtn').addEventListener('mouseup', () => keys['ArrowUp'] = false);
+        document.getElementById('upBtn').addEventListener('touchstart', () => keys['ArrowUp'] = true);
+        document.getElementById('upBtn').addEventListener('touchend', () => keys['ArrowUp'] = false);
+        
+        document.getElementById('leftBtn').addEventListener('mousedown', () => keys['ArrowLeft'] = true);
+        document.getElementById('leftBtn').addEventListener('mouseup', () => keys['ArrowLeft'] = false);
+        document.getElementById('leftBtn').addEventListener('touchstart', () => keys['ArrowLeft'] = true);
+        document.getElementById('leftBtn').addEventListener('touchend', () => keys['ArrowLeft'] = false);
+        
+        document.getElementById('downBtn').addEventListener('mousedown', () => keys['ArrowDown'] = true);
+        document.getElementById('downBtn').addEventListener('mouseup', () => keys['ArrowDown'] = false);
+        document.getElementById('downBtn').addEventListener('touchstart', () => keys['ArrowDown'] = true);
+        document.getElementById('downBtn').addEventListener('touchend', () => keys['ArrowDown'] = false);
+        
+        document.getElementById('rightBtn').addEventListener('mousedown', () => keys['ArrowRight'] = true);
+        document.getElementById('rightBtn').addEventListener('mouseup', () => keys['ArrowRight'] = false);
+        document.getElementById('rightBtn').addEventListener('touchstart', () => keys['ArrowRight'] = true);
+        document.getElementById('rightBtn').addEventListener('touchend', () => keys['ArrowRight'] = false);
+        
+        // Movement update
+        function updateMovement() {
+            if (keys['ArrowUp'] || keys['w'] || keys['W']) {
+                myPlayer.y = Math.max(15, myPlayer.y - moveSpeed);
+            }
+            if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
+                myPlayer.x = Math.max(15, myPlayer.x - moveSpeed);
+            }
+            if (keys['ArrowDown'] || keys['s'] || keys['S']) {
+                myPlayer.y = Math.min(canvas.height - 15, myPlayer.y + moveSpeed);
+            }
+            if (keys['ArrowRight'] || keys['d'] || keys['D']) {
+                myPlayer.x = Math.min(canvas.width - 15, myPlayer.x + moveSpeed);
+            }
+        }
+        
+        // Movement loop
+        setInterval(updateMovement, 1000 / 60);
+        
+        // Generate initial coins
+        generateCoins();
+        
+        // Draw initial game state
+        drawGame();
+    </script>
 </body>
 </html>
