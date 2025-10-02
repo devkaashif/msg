@@ -1,408 +1,107 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Firebase Authentication Project</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        body {
-            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-
-        .container {
-            width: 100%;
-            max-width: 400px;
-            background-color: white;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            overflow: hidden;
-        }
-
-        .form-container {
-            padding: 30px;
-        }
-
-        h1 {
-            text-align: center;
-            margin-bottom: 10px;
-            color: #333;
-        }
-
-        .subtitle {
-            text-align: center;
-            color: #666;
-            margin-bottom: 30px;
-            font-size: 14px;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 8px;
-            color: #555;
-            font-weight: 500;
-        }
-
-        input {
-            width: 100%;
-            padding: 12px 15px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-size: 16px;
-            transition: all 0.3s;
-        }
-
-        input:focus {
-            outline: none;
-            border-color: #6a11cb;
-            box-shadow: 0 0 0 2px rgba(106, 17, 203, 0.2);
-        }
-
-        button {
-            width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(106, 17, 203, 0.4);
-        }
-
-        button:active {
-            transform: translateY(0);
-        }
-
-        .toggle-form {
-            text-align: center;
-            margin-top: 20px;
-            font-size: 14px;
-        }
-
-        .toggle-form a {
-            color: #6a11cb;
-            text-decoration: none;
-            font-weight: 500;
-            cursor: pointer;
-        }
-
-        .toggle-form a:hover {
-            text-decoration: underline;
-        }
-
-        .message {
-            padding: 10px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-            text-align: center;
-            display: none;
-        }
-
-        .success {
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-
-        .error {
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-
-        .dashboard {
-            display: none;
-            padding: 30px;
-            text-align: center;
-        }
-
-        .user-info {
-            background-color: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-
-        .logout-btn {
-            background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
-            margin-top: 10px;
-        }
-
-        .loader {
-            display: none;
-            text-align: center;
-            margin: 20px 0;
-        }
-
-        .loader:after {
-            content: " ";
-            display: inline-block;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            border: 3px solid #6a11cb;
-            border-color: #6a11cb transparent #6a11cb transparent;
-            animation: loader 1.2s linear infinite;
-        }
-
-        @keyframes loader {
-            0% {
-                transform: rotate(0deg);
-            }
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-
-        @media (max-width: 480px) {
-            .container {
-                max-width: 100%;
-            }
-            
-            .form-container {
-                padding: 20px;
-            }
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Firebase Note Sharing</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h1 {
+      color: #333;
+    }
+    #noteForm {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    input, button {
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background: #007BFF;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .note {
+      background: white;
+      padding: 10px;
+      margin: 5px 0;
+      width: 300px;
+      border-radius: 5px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Login Form -->
-        <div class="form-container" id="login-container">
-            <h1>Welcome Back</h1>
-            <p class="subtitle">Sign in to your account</p>
-            
-            <div class="message" id="login-message"></div>
-            
-            <form id="login-form">
-                <div class="form-group">
-                    <label for="login-email">Email</label>
-                    <input type="email" id="login-email" placeholder="Enter your email" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="login-password">Password</label>
-                    <input type="password" id="login-password" placeholder="Enter your password" required>
-                </div>
-                
-                <div class="loader" id="login-loader"></div>
-                
-                <button type="submit">Sign In</button>
-            </form>
-            
-            <div class="toggle-form">
-                Don't have an account? <a id="show-signup">Sign Up</a>
-            </div>
-        </div>
-        
-        <!-- Signup Form -->
-        <div class="form-container" id="signup-container" style="display: none;">
-            <h1>Create Account</h1>
-            <p class="subtitle">Sign up for a new account</p>
-            
-            <div class="message" id="signup-message"></div>
-            
-            <form id="signup-form">
-                <div class="form-group">
-                    <label for="signup-name">Full Name</label>
-                    <input type="text" id="signup-name" placeholder="Enter your full name" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="signup-email">Email</label>
-                    <input type="email" id="signup-email" placeholder="Enter your email" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="signup-password">Password</label>
-                    <input type="password" id="signup-password" placeholder="Create a password" required>
-                </div>
-                
-                <div class="loader" id="signup-loader"></div>
-                
-                <button type="submit">Sign Up</button>
-            </form>
-            
-            <div class="toggle-form">
-                Already have an account? <a id="show-login">Sign In</a>
-            </div>
-        </div>
-        
-        <!-- Dashboard -->
-        <div class="dashboard" id="dashboard">
-            <h1>Welcome to Your Dashboard</h1>
-            <p class="subtitle">You have successfully logged in</p>
-            
-            <div class="user-info">
-                <h3 id="user-name">User Name</h3>
-                <p id="user-email">user@example.com</p>
-            </div>
-            
-            <button class="logout-btn" id="logout-btn">Log Out</button>
-        </div>
-    </div>
+  <h1>Firebase Note Sharing</h1>
+  
+  <form id="noteForm">
+    <input type="text" id="noteInput" placeholder="Write a note..." required />
+    <button type="submit">Add</button>
+  </form>
+  
+  <div id="notes"></div>
 
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-    <script>
-        // Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyDrHe4VwIFCyUI4u8-WwbcncSppJqf7AW4",
-            authDomain: "new-1-15bbf.firebaseapp.com",
-            projectId: "new-1-15bbf",
-            storageBucket: "new-1-15bbf.firebasestorage.app",
-            messagingSenderId: "25831911925",
-            appId: "1:25831911925:web:bf664020e248a5f239f0bc",
-            measurementId: "G-KY3MJVJ0EM"
-        };
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+  
+  <script>
+    // Your Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyD0T-mS__FlN3QASJnmD0K6S5VNDiN2bxQ",
+      authDomain: "poplol-7209f.firebaseapp.com",
+      projectId: "poplol-7209f",
+      storageBucket: "poplol-7209f.appspot.com",
+      messagingSenderId: "105810834",
+      appId: "1:105810834:web:example"
+    };
 
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-        // DOM Elements
-        const loginContainer = document.getElementById('login-container');
-        const signupContainer = document.getElementById('signup-container');
-        const dashboard = document.getElementById('dashboard');
-        const loginForm = document.getElementById('login-form');
-        const signupForm = document.getElementById('signup-form');
-        const showSignup = document.getElementById('show-signup');
-        const showLogin = document.getElementById('show-login');
-        const logoutBtn = document.getElementById('logout-btn');
-        const loginMessage = document.getElementById('login-message');
-        const signupMessage = document.getElementById('signup-message');
-        const loginLoader = document.getElementById('login-loader');
-        const signupLoader = document.getElementById('signup-loader');
-        const userName = document.getElementById('user-name');
-        const userEmail = document.getElementById('user-email');
+    const noteForm = document.getElementById("noteForm");
+    const noteInput = document.getElementById("noteInput");
+    const notesDiv = document.getElementById("notes");
 
-        // Show/Hide Forms
-        showSignup.addEventListener('click', () => {
-            loginContainer.style.display = 'none';
-            signupContainer.style.display = 'block';
-            clearMessages();
+    // Add Note
+    noteForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const note = noteInput.value.trim();
+      if(note){
+        await db.collection("notes").add({
+          text: note,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
+        noteInput.value = "";
+      }
+    });
 
-        showLogin.addEventListener('click', () => {
-            signupContainer.style.display = 'none';
-            loginContainer.style.display = 'block';
-            clearMessages();
-        });
-
-        // Clear message displays
-        function clearMessages() {
-            loginMessage.style.display = 'none';
-            signupMessage.style.display = 'none';
-        }
-
-        // Show message
-        function showMessage(element, message, type) {
-            element.textContent = message;
-            element.className = `message ${type}`;
-            element.style.display = 'block';
-        }
-
-        // Login
-        loginForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-            
-            loginLoader.style.display = 'block';
-            
-            auth.signInWithEmailAndPassword(email, password)
-                .then((userCredential) => {
-                    // Signed in
-                    loginLoader.style.display = 'none';
-                    showDashboard(userCredential.user);
-                })
-                .catch((error) => {
-                    loginLoader.style.display = 'none';
-                    const errorMessage = error.message;
-                    showMessage(loginMessage, errorMessage, 'error');
-                });
-        });
-
-        // Signup
-        signupForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            
-            const name = document.getElementById('signup-name').value;
-            const email = document.getElementById('signup-email').value;
-            const password = document.getElementById('signup-password').value;
-            
-            signupLoader.style.display = 'block';
-            
-            auth.createUserWithEmailAndPassword(email, password)
-                .then((userCredential) => {
-                    // Signed up
-                    signupLoader.style.display = 'none';
-                    
-                    // Update user profile with name
-                    return userCredential.user.updateProfile({
-                        displayName: name
-                    }).then(() => {
-                        showDashboard(userCredential.user);
-                    });
-                })
-                .catch((error) => {
-                    signupLoader.style.display = 'none';
-                    const errorMessage = error.message;
-                    showMessage(signupMessage, errorMessage, 'error');
-                });
-        });
-
-        // Logout
-        logoutBtn.addEventListener('click', () => {
-            auth.signOut().then(() => {
-                loginContainer.style.display = 'block';
-                dashboard.style.display = 'none';
-                clearMessages();
-                loginForm.reset();
-                signupForm.reset();
-            });
-        });
-
-        // Show Dashboard
-        function showDashboard(user) {
-            loginContainer.style.display = 'none';
-            signupContainer.style.display = 'none';
-            dashboard.style.display = 'block';
-            
-            userName.textContent = user.displayName || 'User';
-            userEmail.textContent = user.email;
-        }
-
-        // Check if user is already logged in
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                showDashboard(user);
-            }
-        });
-    </script>
+    // Show Notes in Real-time
+    db.collection("notes").orderBy("timestamp","desc").onSnapshot(snapshot => {
+      notesDiv.innerHTML = "";
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const div = document.createElement("div");
+        div.classList.add("note");
+        div.textContent = data.text;
+        notesDiv.appendChild(div);
+      });
+    });
+  </script>
 </body>
 </html>
