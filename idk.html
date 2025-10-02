@@ -3,104 +3,370 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Firebase Messaging App</title>
+  <title>Live Chat App</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f9fafb;
+    * {
       margin: 0;
-      display: flex;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    body {
+      background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+      color: #333;
       height: 100vh;
+      display: flex;
     }
+    
+    .container {
+      width: 95%;
+      max-width: 1200px;
+      height: 90vh;
+      margin: auto;
+      background-color: rgba(255, 255, 255, 0.95);
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      overflow: hidden;
+      display: flex;
+    }
+    
     #sidebar {
-      width: 250px;
+      width: 300px;
       background: #fff;
-      border-right: 1px solid #ddd;
-      padding: 15px;
-      overflow-y: auto;
+      border-right: 1px solid #e1e5ee;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
     }
+    
+    .sidebar-header {
+      background: linear-gradient(to right, #4a00e0, #8e2de2);
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+    
+    .sidebar-header h2 {
+      margin-bottom: 5px;
+    }
+    
+    .status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+      background-color: #f8f9fa;
+      border-bottom: 1px solid #e9ecef;
+    }
+    
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+    
+    .connected {
+      background-color: #28a745;
+    }
+    
+    .disconnected {
+      background-color: #dc3545;
+    }
+    
+    .user-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 0;
+    }
+    
+    .user {
+      padding: 15px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      transition: background-color 0.2s;
+    }
+    
+    .user:hover {
+      background: #f0f8ff;
+    }
+    
+    .user.active {
+      background: #e6f2ff;
+      border-left: 4px solid #4a00e0;
+    }
+    
+    .user-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(to right, #4a00e0, #8e2de2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      margin-right: 12px;
+    }
+    
+    .user-info {
+      flex: 1;
+    }
+    
+    .user-name {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    
+    .user-status {
+      font-size: 0.8rem;
+      color: #6c757d;
+      display: flex;
+      align-items: center;
+    }
+    
+    .online-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #28a745;
+      margin-right: 5px;
+    }
+    
     #chat {
       flex: 1;
       display: flex;
       flex-direction: column;
+      background-color: #f8f9fa;
     }
-    h2 {
-      margin-top: 0;
+    
+    .chat-header {
+      background: white;
+      padding: 15px 20px;
+      border-bottom: 1px solid #e1e5ee;
+      display: flex;
+      align-items: center;
     }
-    .user {
-      padding: 10px;
-      border-bottom: 1px solid #eee;
-      cursor: pointer;
+    
+    .chat-header-info {
+      margin-left: 12px;
     }
-    .user:hover {
-      background: #f0f0f0;
+    
+    .chat-header-name {
+      font-weight: 600;
+      font-size: 1.1rem;
     }
+    
+    .chat-header-status {
+      font-size: 0.85rem;
+      color: #28a745;
+      display: flex;
+      align-items: center;
+    }
+    
     #messages {
       flex: 1;
-      padding: 15px;
+      padding: 20px;
       overflow-y: auto;
+      display: flex;
+      flex-direction: column;
     }
+    
     .msg {
-      margin: 5px 0;
-      padding: 8px 12px;
-      border-radius: 12px;
+      margin: 8px 0;
+      padding: 12px 16px;
+      border-radius: 18px;
       max-width: 70%;
       word-wrap: break-word;
+      position: relative;
+      animation: fadeIn 0.3s ease;
     }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
     .sent {
-      background: #007BFF;
+      background: linear-gradient(to right, #4a00e0, #8e2de2);
       color: white;
       align-self: flex-end;
+      border-bottom-right-radius: 4px;
     }
+    
     .received {
-      background: #e5e5ea;
+      background: white;
+      border: 1px solid #e1e5ee;
       align-self: flex-start;
+      border-bottom-left-radius: 4px;
     }
+    
+    .msg-time {
+      font-size: 0.7rem;
+      opacity: 0.7;
+      margin-top: 5px;
+      text-align: right;
+    }
+    
+    .msg-info {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+    }
+    
+    .msg-sender {
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+    
+    .empty-chat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #6c757d;
+      text-align: center;
+      padding: 20px;
+    }
+    
+    .empty-chat i {
+      font-size: 3rem;
+      margin-bottom: 15px;
+      color: #adb5bd;
+    }
+    
     #messageForm {
       display: flex;
-      padding: 10px;
-      border-top: 1px solid #ddd;
+      padding: 15px;
+      background: white;
+      border-top: 1px solid #e1e5ee;
     }
+    
+    .input-container {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    
     #messageInput {
       flex: 1;
-      padding: 10px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
+      padding: 12px 15px;
+      border-radius: 24px;
+      border: 1px solid #ddd;
+      outline: none;
+      font-size: 1rem;
+      transition: border-color 0.3s;
     }
+    
+    #messageInput:focus {
+      border-color: #4a00e0;
+    }
+    
     button {
-      padding: 10px 15px;
+      padding: 12px 20px;
       margin-left: 10px;
       border: none;
-      border-radius: 6px;
-      background: #007BFF;
+      border-radius: 24px;
+      background: linear-gradient(to right, #4a00e0, #8e2de2);
       color: white;
       cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
     }
+    
     button:hover {
-      background: #0056b3;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    button i {
+      margin-right: 8px;
+    }
+    
+    @media (max-width: 768px) {
+      .container {
+        width: 100%;
+        height: 100vh;
+        border-radius: 0;
+      }
+      
+      #sidebar {
+        width: 80px;
+      }
+      
+      .user-info, .sidebar-header h2 {
+        display: none;
+      }
+      
+      .user {
+        justify-content: center;
+        padding: 15px 10px;
+      }
+      
+      .msg {
+        max-width: 85%;
+      }
     }
   </style>
 </head>
 <body>
-  <!-- Sidebar for user list -->
-  <div id="sidebar">
-    <h2>Users</h2>
-    <button onclick="login()">Login with Google</button>
-    <div id="userList"></div>
-  </div>
+  <div class="container">
+    <!-- Sidebar for user list -->
+    <div id="sidebar">
+      <div class="sidebar-header">
+        <h2>Live Chat</h2>
+        <p>Select a user to chat</p>
+      </div>
+      
+      <div class="status-bar">
+        <div class="status-dot connected" id="statusDot"></div>
+        <span id="statusText">Connected to Firebase</span>
+      </div>
+      
+      <div class="user-list" id="userList">
+        <!-- Users will be loaded here -->
+      </div>
+    </div>
 
-  <!-- Chat Section -->
-  <div id="chat">
-    <div id="messages"></div>
-    <form id="messageForm">
-      <input type="text" id="messageInput" placeholder="Type a message..." required />
-      <button type="submit">Send</button>
-    </form>
+    <!-- Chat Section -->
+    <div id="chat">
+      <div class="chat-header">
+        <div class="user-avatar" id="activeUserAvatar">U</div>
+        <div class="chat-header-info">
+          <div class="chat-header-name" id="activeUserName">Select a user to start chatting</div>
+          <div class="chat-header-status" id="activeUserStatus"></div>
+        </div>
+      </div>
+      
+      <div id="messages">
+        <div class="empty-chat">
+          <i class="fas fa-comments"></i>
+          <h3>No chat selected</h3>
+          <p>Choose a user from the sidebar to start a conversation</p>
+        </div>
+      </div>
+      
+      <form id="messageForm">
+        <div class="input-container">
+          <input type="text" id="messageInput" placeholder="Type a message..." required />
+        </div>
+        <button type="submit">
+          <i class="fas fa-paper-plane"></i> Send
+        </button>
+      </form>
+    </div>
   </div>
 
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
   
   <script>
@@ -114,93 +380,210 @@
       appId: "1:105810834:web:example"
     };
 
+    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
-    const auth = firebase.auth();
 
-    let currentUser = null;
+    // Generate a random user ID for this session
+    const currentUserId = 'user_' + Math.random().toString(36).substr(2, 9);
+    const currentUserName = "User " + Math.floor(Math.random() * 1000);
+    
     let activeChatUser = null;
 
+    // DOM elements
     const userListDiv = document.getElementById("userList");
     const messagesDiv = document.getElementById("messages");
     const messageForm = document.getElementById("messageForm");
     const messageInput = document.getElementById("messageInput");
+    const activeUserName = document.getElementById("activeUserName");
+    const activeUserAvatar = document.getElementById("activeUserAvatar");
+    const activeUserStatus = document.getElementById("activeUserStatus");
+    const statusDot = document.getElementById("statusDot");
+    const statusText = document.getElementById("statusText");
 
-    // Login with Google
-    async function login() {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      try {
-        const result = await auth.signInWithPopup(provider);
-        currentUser = result.user;
-        await db.collection("users").doc(currentUser.uid).set({
-          name: currentUser.displayName,
-          email: currentUser.email
-        }, { merge: true });
-        loadUsers();
-      } catch (error) {
-        alert("Login failed: " + error.message);
-      }
-    }
+    // Predefined users (in a real app, these would come from your database)
+    const predefinedUsers = [
+      { id: 'user_1', name: 'Alex Johnson', online: true },
+      { id: 'user_2', name: 'Sam Smith', online: true },
+      { id: 'user_3', name: 'Taylor Swift', online: false },
+      { id: 'user_4', name: 'Jordan Lee', online: true },
+      { id: 'user_5', name: 'Casey Brown', online: false }
+    ];
+
+    // Add current user to the database
+    db.collection("users").doc(currentUserId).set({
+      name: currentUserName,
+      online: true,
+      lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
 
     // Load Users List
     function loadUsers() {
-      db.collection("users").onSnapshot(snapshot => {
-        userListDiv.innerHTML = "";
-        snapshot.forEach(doc => {
-          if (doc.id !== currentUser.uid) {
-            const user = doc.data();
-            const div = document.createElement("div");
-            div.classList.add("user");
-            div.textContent = user.name || user.email;
-            div.onclick = () => openChat(doc.id, user);
-            userListDiv.appendChild(div);
-          }
-        });
+      // Clear the user list
+      userListDiv.innerHTML = "";
+      
+      // Add predefined users to the list
+      predefinedUsers.forEach(user => {
+        const userElement = document.createElement("div");
+        userElement.classList.add("user");
+        if (user.id === activeChatUser?.id) {
+          userElement.classList.add("active");
+        }
+        
+        userElement.innerHTML = `
+          <div class="user-avatar">${user.name.charAt(0)}</div>
+          <div class="user-info">
+            <div class="user-name">${user.name}</div>
+            <div class="user-status">
+              <div class="online-dot" style="background-color: ${user.online ? '#28a745' : '#6c757d'}"></div>
+              ${user.online ? 'Online' : 'Offline'}
+            </div>
+          </div>
+        `;
+        
+        userElement.onclick = () => openChat(user.id, user);
+        userListDiv.appendChild(userElement);
       });
     }
 
-    // Open Chat
+    // Open Chat with a user
     function openChat(userId, user) {
       activeChatUser = { id: userId, ...user };
-      messagesDiv.innerHTML = "";
+      
+      // Update UI
+      activeUserName.textContent = user.name;
+      activeUserAvatar.textContent = user.name.charAt(0);
+      activeUserStatus.innerHTML = `
+        <div class="online-dot" style="background-color: ${user.online ? '#28a745' : '#6c757d'}"></div>
+        ${user.online ? 'Online' : 'Offline'}
+      `;
+      
+      // Clear messages and show loading
+      messagesDiv.innerHTML = '<div class="empty-chat"><i class="fas fa-spinner fa-spin"></i><h3>Loading messages...</h3></div>';
+      
+      // Load messages for this chat
+      loadMessages(userId);
+      
+      // Update active user in sidebar
+      loadUsers();
+    }
+
+    // Load messages for the active chat
+    function loadMessages(userId) {
+      // Listen for messages in real-time
       db.collection("messages")
-        .where("participants", "array-contains", currentUser.uid)
-        .orderBy("timestamp")
+        .where("participants", "array-contains", currentUserId)
+        .orderBy("timestamp", "asc")
         .onSnapshot(snapshot => {
           messagesDiv.innerHTML = "";
+          
+          let hasMessages = false;
+          
           snapshot.forEach(doc => {
             const msg = doc.data();
+            // Check if this message is part of the current chat
             if (
-              (msg.from === currentUser.uid && msg.to === userId) ||
-              (msg.from === userId && msg.to === currentUser.uid)
+              (msg.from === currentUserId && msg.to === userId) ||
+              (msg.from === userId && msg.to === currentUserId)
             ) {
-              const div = document.createElement("div");
-              div.classList.add("msg");
-              div.classList.add(msg.from === currentUser.uid ? "sent" : "received");
-              div.textContent = msg.text;
-              messagesDiv.appendChild(div);
+              displayMessage(msg);
+              hasMessages = true;
             }
           });
-          messagesDiv.scrollTop = messagesDiv.scrollHeight;
+          
+          // Show empty state if no messages
+          if (!hasMessages) {
+            messagesDiv.innerHTML = `
+              <div class="empty-chat">
+                <i class="fas fa-comment-slash"></i>
+                <h3>No messages yet</h3>
+                <p>Start the conversation by sending a message!</p>
+              </div>
+            `;
+          } else {
+            // Scroll to the bottom of the messages
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+          }
+        }, error => {
+          console.error("Error loading messages: ", error);
+          statusDot.className = "status-dot disconnected";
+          statusText.textContent = "Error connecting to Firebase";
         });
+    }
+
+    // Display a message in the chat
+    function displayMessage(msg) {
+      const div = document.createElement("div");
+      div.classList.add("msg");
+      div.classList.add(msg.from === currentUserId ? "sent" : "received");
+      
+      // Format timestamp
+      let timeString = "Just now";
+      if (msg.timestamp) {
+        const date = msg.timestamp.toDate();
+        timeString = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+      
+      // Determine sender name
+      const senderName = msg.from === currentUserId ? "You" : 
+                         (predefinedUsers.find(u => u.id === msg.from)?.name || "User");
+      
+      div.innerHTML = `
+        <div class="msg-info">
+          <div class="msg-sender">${senderName}</div>
+        </div>
+        <div class="msg-text">${msg.text}</div>
+        <div class="msg-time">${timeString}</div>
+      `;
+      
+      messagesDiv.appendChild(div);
     }
 
     // Send Message
     messageForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-      if (!activeChatUser) return alert("Select a user to chat with!");
+      
+      if (!activeChatUser) {
+        alert("Please select a user to chat with first!");
+        return;
+      }
+      
       const text = messageInput.value.trim();
       if (text) {
-        await db.collection("messages").add({
-          text,
-          from: currentUser.uid,
-          to: activeChatUser.id,
-          participants: [currentUser.uid, activeChatUser.id],
-          timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        messageInput.value = "";
+        try {
+          await db.collection("messages").add({
+            text,
+            from: currentUserId,
+            to: activeChatUser.id,
+            participants: [currentUserId, activeChatUser.id],
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+          });
+          messageInput.value = "";
+        } catch (error) {
+          console.error("Error sending message: ", error);
+          alert("Failed to send message. Please try again.");
+        }
       }
     });
+
+    // Initialize the app
+    function initApp() {
+      loadUsers();
+      
+      // Set connection status
+      db.enableNetwork()
+        .then(() => {
+          statusDot.className = "status-dot connected";
+          statusText.textContent = "Connected to Firebase";
+        })
+        .catch((error) => {
+          statusDot.className = "status-dot disconnected";
+          statusText.textContent = "Disconnected from Firebase";
+        });
+    }
+
+    // Start the app when the page loads
+    window.onload = initApp;
   </script>
 </body>
 </html>
