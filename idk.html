@@ -1,280 +1,681 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Territory Painter — Multiplayer (Firebase)</title>
-  <style>
-    :root{--bg:#0f1724;--grid:#111827;--ui:#e6edf3}
-    html,body{height:100%;margin:0;background:var(--bg);color:var(--ui);font-family:Inter,system-ui,Arial}
-    .wrap{display:flex;gap:16px;padding:18px}
-    canvas{background:linear-gradient(180deg,#07102633,#00000066);border-radius:8px}
-    .panel{width:320px}
-    h1{margin:0 0 8px;font-size:18px}
-    label{display:block;margin-top:8px;font-size:13px;color:#9fb0c6}
-    input,button{width:100%;padding:8px;margin-top:6px;border-radius:6px;border:0}
-    input{background:#0b1220;color:var(--ui)}
-    button{background:#0ea5a4;color:#001;cursor:pointer}
-    .info{margin-top:10px;font-size:13px;color:#9fb0c6}
-    .players{margin-top:10px}
-    .player-item{display:flex;align-items:center;gap:8px;margin:6px 0}
-    .swatch{width:18px;height:18px;border-radius:4px}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Drifters - Multiplayer Game</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1200px;
+            width: 100%;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            background: linear-gradient(to right, #00c6ff, #0072ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 10px rgba(0, 198, 255, 0.5);
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.8;
+            margin-bottom: 20px;
+        }
+        
+        .game-area {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .game-container {
+            flex: 1;
+            min-width: 300px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            padding: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        #gameCanvas {
+            width: 100%;
+            height: 500px;
+            background: #000;
+            border-radius: 10px;
+            display: block;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+        }
+        
+        button {
+            background: linear-gradient(to right, #00c6ff, #0072ff);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(0, 114, 255, 0.4);
+        }
+        
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 114, 255, 0.6);
+        }
+        
+        button:active {
+            transform: translateY(1px);
+        }
+        
+        .players-container {
+            flex: 1;
+            min-width: 250px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            padding: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .players-title {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            text-align: center;
+            color: #00c6ff;
+        }
+        
+        #playersList {
+            list-style-type: none;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .player-item {
+            padding: 12px;
+            margin-bottom: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s;
+        }
+        
+        .player-item:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateX(5px);
+        }
+        
+        .player-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        .instructions {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .instructions h2 {
+            color: #00c6ff;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .instructions ul {
+            padding-left: 20px;
+        }
+        
+        .instructions li {
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+        
+        .score-display {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+            font-size: 1.2rem;
+        }
+        
+        .status {
+            text-align: center;
+            margin: 10px 0;
+            font-size: 1.1rem;
+            color: #00ff88;
+        }
+        
+        @media (max-width: 768px) {
+            .game-area {
+                flex-direction: column;
+            }
+            
+            h1 {
+                font-size: 2.2rem;
+            }
+        }
+    </style>
 </head>
 <body>
-  <div class="wrap">
-    <canvas id="game" width="800" height="520"></canvas>
-    <div class="panel">
-      <h1>Territory Painter — Multiplayer</h1>
-      <div>
-        <label>Display name</label>
-        <input id="name" placeholder="Your name" />
-        <label>Color (hex)</label>
-        <input id="color" placeholder="#ff6b6b" />
-        <button id="join">Join Game</button>
-        <div class="info">Move with arrow keys or WASD. Move over tiles to claim them. Cover the grid to score.</div>
-      </div>
-
-      <div class="players">
-        <h3 style="margin-top:14px">Players</h3>
-        <div id="playersList"></div>
-        <div style="margin-top:10px" id="scoreInfo"></div>
-      </div>
+    <div class="container">
+        <header>
+            <h1>Quantum Drifters</h1>
+            <p class="subtitle">A unique multiplayer experience where particles phase and anti-particles eliminate</p>
+        </header>
+        
+        <div class="game-area">
+            <div class="game-container">
+                <canvas id="gameCanvas"></canvas>
+                <div class="controls">
+                    <button id="joinBtn">Join Game</button>
+                    <button id="leaveBtn">Leave Game</button>
+                </div>
+                <div class="score-display">
+                    <div>Your Score: <span id="playerScore">0</span></div>
+                    <div>Players Online: <span id="playerCount">0</span></div>
+                </div>
+                <div id="status" class="status"></div>
+            </div>
+            
+            <div class="players-container">
+                <h2 class="players-title">Quantum Field</h2>
+                <ul id="playersList"></ul>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <h2>How to Play Quantum Drifters</h2>
+            <ul>
+                <li><strong>Move:</strong> Use WASD or Arrow Keys to navigate the quantum field</li>
+                <li><strong>Objective:</strong> Collect quantum energy (blue orbs) to increase your score</li>
+                <li><strong>Particles:</strong> You can phase through other players (particles)</li>
+                <li><strong>Anti-Particles:</strong> Avoid red anti-particles - they will eliminate you!</li>
+                <li><strong>Quantum State:</strong> Press SPACE to temporarily become intangible to anti-particles (cooldown applies)</li>
+                <li><strong>Winning:</strong> The player with the highest score when the timer ends wins!</li>
+            </ul>
+        </div>
     </div>
-  </div>
 
-  <!-- Firebase compat SDKs (using compat for simpler migration) -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDrHe4VwIFCyUI4u8-WwbcncSppJqf7AW4",
+            authDomain: "new-1-15bbf.firebaseapp.com",
+            projectId: "new-1-15bbf",
+            storageBucket: "new-1-15bbf.firebasestorage.app",
+            messagingSenderId: "25831911925",
+            appId: "1:25831911925:web:bf664020e248a5f239f0bc",
+            measurementId: "G-KY3MJVJ0EM"
+        };
 
-  <script>
-  // ---------- Replace with provided config (already inserted) ----------
-  const firebaseConfig = {
-    apiKey: "AIzaSyDrHe4VwIFCyUI4u8-WwbcncSppJqf7AW4",
-    authDomain: "new-1-15bbf.firebaseapp.com",
-    projectId: "new-1-15bbf",
-    storageBucket: "new-1-15bbf.firebasestorage.app",
-    messagingSenderId: "25831911925",
-    appId: "1:25831911925:web:bf664020e248a5f239f0bc",
-    measurementId: "G-KY3MJVJ0EM"
-  };
-  // --------------------------------------------------------------------
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
 
-  // Initialize Firebase
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
-
-  // Game settings
-  const COLS = 20; // width in tiles
-  const ROWS = 13; // height in tiles
-  const TILE = 32; // pixels
-
-  const canvas = document.getElementById('game');
-  const ctx = canvas.getContext('2d');
-
-  // Resize canvas to grid size (plus padding)
-  canvas.width = COLS * TILE + 2;
-  canvas.height = ROWS * TILE + 2;
-
-  // Local client state
-  let client = {
-    id: null,
-    name: '',
-    color: '#ff6b6b',
-    x: 0,
-    y: 0
-  };
-
-  // Firestore references
-  const playersRef = db.collection('players');
-  const tilesDoc = db.collection('game').doc('tiles');
-
-  // UI elements
-  const nameInput = document.getElementById('name');
-  const colorInput = document.getElementById('color');
-  const joinBtn = document.getElementById('join');
-  const playersList = document.getElementById('playersList');
-  const scoreInfo = document.getElementById('scoreInfo');
-
-  // Local copy of world state
-  let players = {};
-  let tiles = {}; // map of "x_y" -> {ownerId, color}
-
-  // Utility
-  function randId(len=8){return Math.random().toString(36).slice(2,2+len)}
-  function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
-
-  // Initialize tiles document if missing (small grid => ok)
-  async function ensureTilesDoc(){
-    const snap = await tilesDoc.get();
-    if(!snap.exists){
-      const map = {};
-      for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++)map[`${x}_${y}`] = null;
-      await tilesDoc.set({map});
-    }
-  }
-
-  // Join the game
-  joinBtn.addEventListener('click', async ()=>{
-    client.name = (nameInput.value || 'Player_'+randId(3)).slice(0,18);
-    client.color = (colorInput.value || '#'+Math.floor(Math.random()*16777215).toString(16)).slice(0,7);
-    client.id = 'p_'+randId(6);
-    client.x = Math.floor(Math.random()*COLS);
-    client.y = Math.floor(Math.random()*ROWS);
-
-    await ensureTilesDoc();
-
-    // create player doc (no auth) with TTL-style heartbeat
-    await playersRef.doc(client.id).set({
-      name: client.name,
-      color: client.color,
-      x: client.x,
-      y: client.y,
-      ts: firebase.firestore.FieldValue.serverTimestamp()
-    });
-
-    // Claim starting tile
-    claimTile(client.x, client.y);
-
-    startRealtime();
-    joinBtn.disabled = true;
-  });
-
-  // Movement handling
-  window.addEventListener('keydown', (e)=>{
-    if(!client.id) return;
-    const key = e.key;
-    let dx=0, dy=0;
-    if(key==='ArrowUp' || key==='w' || key==='W') dy=-1;
-    if(key==='ArrowDown' || key==='s' || key==='S') dy=1;
-    if(key==='ArrowLeft' || key==='a' || key==='A') dx=-1;
-    if(key==='ArrowRight' || key==='d' || key==='D') dx=1;
-    if(dx||dy){
-      client.x = clamp(client.x+dx,0,COLS-1);
-      client.y = clamp(client.y+dy,0,ROWS-1);
-      // update our player position and claim tile
-      playersRef.doc(client.id).update({x:client.x,y:client.y,ts: firebase.firestore.FieldValue.serverTimestamp()});
-      claimTile(client.x, client.y);
-    }
-  });
-
-  // Claim a tile using a transaction (avoid race conditions)
-  async function claimTile(x,y){
-    const key = `${x}_${y}`;
-    try{
-      await db.runTransaction(async (tx)=>{
-        const doc = await tx.get(tilesDoc);
-        const map = doc.exists ? doc.data().map : {};
-        // write owner to the tile
-        map[key] = {ownerId: client.id, color: client.color, ts: Date.now()};
-        tx.set(tilesDoc, {map});
-      });
-    }catch(err){
-      console.warn('claim failed',err);
-    }
-  }
-
-  // Real-time listeners
-  function startRealtime(){
-    // players list
-    playersRef.onSnapshot(snapshot=>{
-      players = {};
-      snapshot.forEach(d=>{
-        const data = d.data();
-        // ignore stale players (no TTL here, but client removes on unload)
-        players[d.id] = {...data};
-      });
-      renderPlayersList();
-      render();
-    });
-
-    // tiles
-    tilesDoc.onSnapshot(doc=>{
-      const data = doc.data();
-      tiles = data && data.map ? data.map : {};
-      render();
-      renderScoreInfo();
-    });
-
-    // heartbeat to update timestamp every 8 seconds
-    setInterval(()=>{
-      if(client.id) playersRef.doc(client.id).update({ts: firebase.firestore.FieldValue.serverTimestamp()}).catch(()=>{});
-    },8000);
-
-    // remove player on close
-    window.addEventListener('beforeunload', ()=>{
-      if(client.id) playersRef.doc(client.id).delete();
-    });
-  }
-
-  // Drawing functions
-  function render(){
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    // draw tiles
-    for(let y=0;y<ROWS;y++){
-      for(let x=0;x<COLS;x++){
-        const key = `${x}_${y}`;
-        const t = tiles[key];
-        if(t && t.color){
-          ctx.fillStyle = t.color + 'cc'; // semi-transparent
-          ctx.fillRect(1 + x*TILE, 1 + y*TILE, TILE-2, TILE-2);
-        }else{
-          ctx.fillStyle = '#0b1220';
-          ctx.fillRect(1 + x*TILE, 1 + y*TILE, TILE-2, TILE-2);
+        // Game variables
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 800;
+        canvas.height = 500;
+        
+        let gameActive = false;
+        let playerId = null;
+        let players = {};
+        let player = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            radius: 15,
+            color: '#00c6ff',
+            score: 0,
+            quantumState: false,
+            quantumCooldown: 0
+        };
+        
+        let energyOrbs = [];
+        let antiParticles = [];
+        let keys = {};
+        
+        // Generate random color for player
+        function getRandomColor() {
+            const colors = ['#00c6ff', '#0072ff', '#00ff88', '#ff0080', '#ff8c00', '#8a2be2'];
+            return colors[Math.floor(Math.random() * colors.length)];
         }
-        // small grid lines
-        ctx.strokeStyle = '#07182655';
-        ctx.strokeRect(1 + x*TILE, 1 + y*TILE, TILE-2, TILE-2);
-      }
-    }
-
-    // draw players
-    Object.keys(players).forEach(pid=>{
-      const p = players[pid];
-      if(!p) return;
-      const px = 1 + p.x * TILE + TILE/2;
-      const py = 1 + p.y * TILE + TILE/2;
-      ctx.beginPath();
-      ctx.fillStyle = p.color || '#fff';
-      ctx.arc(px, py, TILE*0.36, 0, Math.PI*2);
-      ctx.fill();
-      ctx.strokeStyle = '#0008';
-      ctx.stroke();
-      // name
-      ctx.fillStyle = '#eaf6ff';
-      ctx.font = '12px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText(p.name || pid, px, py + TILE*0.7);
-    });
-  }
-
-  function renderPlayersList(){
-    playersList.innerHTML = '';
-    Object.keys(players).forEach(pid=>{
-      const p = players[pid];
-      const div = document.createElement('div');
-      div.className = 'player-item';
-      div.innerHTML = `<div class=swatch style="background:${p.color}"></div><div style="flex:1">${p.name || pid}</div><div style="opacity:.8">${p.x},${p.y}</div>`;
-      playersList.appendChild(div);
-    });
-  }
-
-  function renderScoreInfo(){
-    // count tiles per player
-    const counts = {};
-    Object.values(tiles).forEach(t=>{
-      if(!t || !t.ownerId) return;
-      counts[t.ownerId] = (counts[t.ownerId]||0) + 1;
-    });
-    // make a small leaderboard
-    const items = Object.keys(counts).map(id=>({id,count:counts[id],name:players[id] ? players[id].name : id, color: (players[id] ? players[id].color : '#888')}));
-    items.sort((a,b)=>b.count-a.count);
-    scoreInfo.innerHTML = '<strong>Top coverage</strong><br>' + items.slice(0,5).map(it=>`<div style="display:flex;align-items:center;gap:8px;margin-top:6px"><div style="width:12px;height:12px;border-radius:3px;background:${it.color}"></div><div style="flex:1">${it.name}</div><div>${it.count}</div></div>`).join('');
-  }
-
-  // initial render
-  render();
-
-  </script>
+        
+        // Draw player on canvas
+        function drawPlayer(p) {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+            
+            // Add glow effect for quantum state
+            if (p.quantumState) {
+                ctx.shadowColor = p.color;
+                ctx.shadowBlur = 20;
+            }
+            
+            ctx.fillStyle = p.color;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            
+            // Draw player ID above the player
+            ctx.fillStyle = '#fff';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(p.id, p.x, p.y - p.radius - 10);
+            
+            // Draw score below the player
+            ctx.fillText(p.score, p.x, p.y + p.radius + 15);
+        }
+        
+        // Draw energy orbs
+        function drawEnergyOrbs() {
+            energyOrbs.forEach(orb => {
+                ctx.beginPath();
+                ctx.arc(orb.x, orb.y, orb.radius, 0, Math.PI * 2);
+                ctx.fillStyle = orb.color;
+                ctx.fill();
+                
+                // Pulsing effect
+                ctx.beginPath();
+                ctx.arc(orb.x, orb.y, orb.radius + 3, 0, Math.PI * 2);
+                ctx.strokeStyle = orb.color;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            });
+        }
+        
+        // Draw anti-particles
+        function drawAntiParticles() {
+            antiParticles.forEach(ap => {
+                ctx.beginPath();
+                ctx.arc(ap.x, ap.y, ap.radius, 0, Math.PI * 2);
+                ctx.fillStyle = ap.color;
+                ctx.fill();
+                
+                // Danger effect
+                ctx.beginPath();
+                ctx.arc(ap.x, ap.y, ap.radius + 5, 0, Math.PI * 2);
+                ctx.strokeStyle = '#ff0000';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            });
+        }
+        
+        // Generate energy orbs
+        function generateEnergyOrbs(count) {
+            for (let i = 0; i < count; i++) {
+                energyOrbs.push({
+                    x: Math.random() * (canvas.width - 30) + 15,
+                    y: Math.random() * (canvas.height - 30) + 15,
+                    radius: 8,
+                    color: '#00c6ff',
+                    value: 10
+                });
+            }
+        }
+        
+        // Generate anti-particles
+        function generateAntiParticles(count) {
+            for (let i = 0; i < count; i++) {
+                antiParticles.push({
+                    x: Math.random() * (canvas.width - 40) + 20,
+                    y: Math.random() * (canvas.height - 40) + 20,
+                    radius: 12,
+                    color: '#ff0000',
+                    speedX: (Math.random() - 0.5) * 2,
+                    speedY: (Math.random() - 0.5) * 2
+                });
+            }
+        }
+        
+        // Update anti-particles
+        function updateAntiParticles() {
+            antiParticles.forEach(ap => {
+                ap.x += ap.speedX;
+                ap.y += ap.speedY;
+                
+                // Bounce off walls
+                if (ap.x - ap.radius < 0 || ap.x + ap.radius > canvas.width) {
+                    ap.speedX *= -1;
+                }
+                if (ap.y - ap.radius < 0 || ap.y + ap.radius > canvas.height) {
+                    ap.speedY *= -1;
+                }
+            });
+        }
+        
+        // Check collisions with energy orbs
+        function checkEnergyOrbCollisions() {
+            for (let i = energyOrbs.length - 1; i >= 0; i--) {
+                const orb = energyOrbs[i];
+                const dx = player.x - orb.x;
+                const dy = player.y - orb.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < player.radius + orb.radius) {
+                    // Collect orb
+                    player.score += orb.value;
+                    energyOrbs.splice(i, 1);
+                    
+                    // Update score in Firebase
+                    if (playerId) {
+                        database.ref('players/' + playerId).update({
+                            score: player.score
+                        });
+                    }
+                    
+                    // Add new orb to maintain count
+                    setTimeout(() => {
+                        energyOrbs.push({
+                            x: Math.random() * (canvas.width - 30) + 15,
+                            y: Math.random() * (canvas.height - 30) + 15,
+                            radius: 8,
+                            color: '#00c6ff',
+                            value: 10
+                        });
+                    }, 1000);
+                }
+            }
+        }
+        
+        // Check collisions with anti-particles
+        function checkAntiParticleCollisions() {
+            if (player.quantumState) return; // Immune in quantum state
+            
+            for (let i = antiParticles.length - 1; i >= 0; i--) {
+                const ap = antiParticles[i];
+                const dx = player.x - ap.x;
+                const dy = player.y - ap.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < player.radius + ap.radius) {
+                    // Eliminated by anti-particle
+                    player.score = Math.max(0, player.score - 50);
+                    
+                    // Update score in Firebase
+                    if (playerId) {
+                        database.ref('players/' + playerId).update({
+                            score: player.score
+                        });
+                    }
+                    
+                    // Reset player position
+                    player.x = canvas.width / 2;
+                    player.y = canvas.height / 2;
+                    
+                    document.getElementById('status').textContent = "Eliminated by anti-particle! Score -50";
+                    setTimeout(() => {
+                        document.getElementById('status').textContent = "";
+                    }, 3000);
+                }
+            }
+        }
+        
+        // Update player position based on keys
+        function updatePlayerPosition() {
+            const speed = 5;
+            
+            if (keys['ArrowUp'] || keys['w'] || keys['W']) {
+                player.y = Math.max(player.radius, player.y - speed);
+            }
+            if (keys['ArrowDown'] || keys['s'] || keys['S']) {
+                player.y = Math.min(canvas.height - player.radius, player.y + speed);
+            }
+            if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
+                player.x = Math.max(player.radius, player.x - speed);
+            }
+            if (keys['ArrowRight'] || keys['d'] || keys['D']) {
+                player.x = Math.min(canvas.width - player.radius, player.x + speed);
+            }
+            
+            // Update player position in Firebase
+            if (playerId && gameActive) {
+                database.ref('players/' + playerId).update({
+                    x: player.x,
+                    y: player.y,
+                    quantumState: player.quantumState
+                });
+            }
+        }
+        
+        // Handle quantum state activation
+        function activateQuantumState() {
+            if (player.quantumCooldown <= 0) {
+                player.quantumState = true;
+                player.quantumCooldown = 300; // 5 seconds cooldown (at 60 FPS)
+                
+                setTimeout(() => {
+                    player.quantumState = false;
+                }, 2000); // Quantum state lasts 2 seconds
+            }
+        }
+        
+        // Game loop
+        function gameLoop() {
+            if (!gameActive) return;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw background with grid
+            drawBackground();
+            
+            // Update and draw game elements
+            updatePlayerPosition();
+            updateAntiParticles();
+            checkEnergyOrbCollisions();
+            checkAntiParticleCollisions();
+            
+            // Update quantum cooldown
+            if (player.quantumCooldown > 0) {
+                player.quantumCooldown--;
+            }
+            
+            // Draw all game elements
+            drawEnergyOrbs();
+            drawAntiParticles();
+            
+            // Draw all players
+            for (let id in players) {
+                if (id !== playerId) {
+                    drawPlayer(players[id]);
+                }
+            }
+            
+            // Draw current player on top
+            drawPlayer(player);
+            
+            // Update UI
+            document.getElementById('playerScore').textContent = player.score;
+            
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Draw background with grid
+        function drawBackground() {
+            // Draw space background
+            ctx.fillStyle = '#0a0a2a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw grid
+            ctx.strokeStyle = 'rgba(0, 198, 255, 0.1)';
+            ctx.lineWidth = 1;
+            
+            // Vertical lines
+            for (let x = 0; x < canvas.width; x += 50) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            
+            // Horizontal lines
+            for (let y = 0; y < canvas.height; y += 50) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+            
+            // Draw quantum field title
+            ctx.fillStyle = 'rgba(0, 198, 255, 0.3)';
+            ctx.font = '20px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('QUANTUM FIELD', canvas.width / 2, 30);
+        }
+        
+        // Initialize game
+        function initGame() {
+            generateEnergyOrbs(15);
+            generateAntiParticles(5);
+            gameActive = true;
+            gameLoop();
+        }
+        
+        // Join game
+        document.getElementById('joinBtn').addEventListener('click', function() {
+            if (gameActive) return;
+            
+            playerId = 'player_' + Math.random().toString(36).substr(2, 9);
+            player.color = getRandomColor();
+            player.x = Math.random() * (canvas.width - 50) + 25;
+            player.y = Math.random() * (canvas.height - 50) + 25;
+            player.score = 0;
+            
+            // Add player to Firebase
+            database.ref('players/' + playerId).set({
+                id: playerId,
+                x: player.x,
+                y: player.y,
+                color: player.color,
+                score: player.score,
+                quantumState: false
+            });
+            
+            document.getElementById('status').textContent = "Joined Quantum Field!";
+            setTimeout(() => {
+                document.getElementById('status').textContent = "";
+            }, 2000);
+            
+            initGame();
+        });
+        
+        // Leave game
+        document.getElementById('leaveBtn').addEventListener('click', function() {
+            if (!gameActive) return;
+            
+            // Remove player from Firebase
+            if (playerId) {
+                database.ref('players/' + playerId).remove();
+                playerId = null;
+            }
+            
+            gameActive = false;
+            players = {};
+            document.getElementById('playersList').innerHTML = '';
+            document.getElementById('playerCount').textContent = '0';
+            document.getElementById('status').textContent = "Left Quantum Field";
+            
+            setTimeout(() => {
+                document.getElementById('status').textContent = "";
+            }, 2000);
+        });
+        
+        // Listen for other players
+        database.ref('players').on('value', function(snapshot) {
+            players = snapshot.val() || {};
+            updatePlayersList();
+        });
+        
+        // Update players list UI
+        function updatePlayersList() {
+            const playersList = document.getElementById('playersList');
+            playersList.innerHTML = '';
+            
+            let playerCount = 0;
+            
+            for (let id in players) {
+                playerCount++;
+                const playerItem = document.createElement('li');
+                playerItem.className = 'player-item';
+                
+                const playerColor = document.createElement('div');
+                playerColor.className = 'player-color';
+                playerColor.style.backgroundColor = players[id].color;
+                
+                const playerInfo = document.createElement('div');
+                playerInfo.textContent = `${players[id].id} - Score: ${players[id].score}`;
+                
+                playerItem.appendChild(playerColor);
+                playerItem.appendChild(playerInfo);
+                playersList.appendChild(playerItem);
+            }
+            
+            document.getElementById('playerCount').textContent = playerCount;
+        }
+        
+        // Keyboard event listeners
+        window.addEventListener('keydown', function(e) {
+            keys[e.key] = true;
+            
+            // Activate quantum state with spacebar
+            if (e.key === ' ' && gameActive) {
+                activateQuantumState();
+            }
+        });
+        
+        window.addEventListener('keyup', function(e) {
+            keys[e.key] = false;
+        });
+        
+        // Initial setup
+        drawBackground();
+        document.getElementById('status').textContent = "Click 'Join Game' to enter the Quantum Field";
+    </script>
 </body>
 </html>
