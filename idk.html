@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Chat Rooms</title>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+    <title>Bubble Pop Multiplayer</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
         * {
             margin: 0;
@@ -16,300 +16,251 @@
         
         body {
             background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
-            color: #fff;
+            color: white;
             min-height: 100vh;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
             padding: 20px;
         }
         
         .container {
+            max-width: 1000px;
             width: 100%;
-            max-width: 1200px;
-            background-color: rgba(0, 0, 0, 0.7);
-            border-radius: 15px;
-            overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-        }
-        
-        .header {
-            background-color: rgba(0, 0, 0, 0.8);
-            padding: 20px;
-            text-align: center;
-            border-bottom: 2px solid #fdbb2d;
-        }
-        
-        .header h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            background: linear-gradient(to right, #fdbb2d, #b21f1f);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        
-        .header p {
-            color: #ccc;
-            font-size: 1.1rem;
-        }
-        
-        .app-content {
-            display: flex;
-            height: 600px;
-        }
-        
-        .rooms-section {
-            width: 300px;
-            background-color: rgba(0, 0, 0, 0.6);
-            padding: 20px;
-            border-right: 1px solid #444;
-            overflow-y: auto;
-        }
-        
-        .chat-section {
-            flex: 1;
             display: flex;
             flex-direction: column;
-            padding: 20px;
+            align-items: center;
         }
         
-        .section-title {
-            font-size: 1.3rem;
-            margin-bottom: 15px;
-            color: #fdbb2d;
-            border-bottom: 1px solid #444;
-            padding-bottom: 10px;
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+            width: 100%;
         }
         
-        .room-list {
-            list-style-type: none;
-        }
-        
-        .room-item {
-            padding: 12px 15px;
+        h1 {
+            font-size: 3rem;
             margin-bottom: 10px;
-            background-color: rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .game-info {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            width: 100%;
+            margin-bottom: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
         }
         
-        .room-item:hover {
-            background-color: rgba(253, 187, 45, 0.2);
-        }
-        
-        .room-item.active {
-            background-color: rgba(253, 187, 45, 0.3);
-            border-left: 4px solid #fdbb2d;
-        }
-        
-        .user-count {
-            background-color: #b21f1f;
-            color: white;
-            border-radius: 50%;
-            width: 25px;
-            height: 25px;
+        .player-info, .room-info {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.8rem;
+            flex-direction: column;
         }
         
-        .create-room {
+        .score {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        
+        .game-area {
+            position: relative;
+            width: 100%;
+            height: 500px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .bubble {
+            position: absolute;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.2s;
+            box-shadow: inset 0 -5px 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        .bubble:hover {
+            transform: scale(1.1);
+        }
+        
+        .players-list {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .players-list h2 {
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .player-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px;
+            margin: 5px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+        }
+        
+        .player-name {
+            font-weight: bold;
+        }
+        
+        .player-score {
+            color: #ffcc00;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
             margin-top: 20px;
         }
         
-        .input-group {
-            display: flex;
-            margin-bottom: 15px;
-        }
-        
-        input {
-            flex: 1;
-            padding: 12px 15px;
-            border: none;
-            border-radius: 8px 0 0 8px;
-            background-color: rgba(255, 255, 255, 0.1);
-            color: white;
-            font-size: 1rem;
-        }
-        
-        input::placeholder {
-            color: #aaa;
-        }
-        
         button {
-            padding: 12px 20px;
+            padding: 10px 20px;
             border: none;
-            border-radius: 0 8px 8px 0;
-            background-color: #fdbb2d;
-            color: #1a1a1a;
+            border-radius: 5px;
+            background: #ffcc00;
+            color: #333;
             font-weight: bold;
             cursor: pointer;
-            transition: background-color 0.3s;
+            transition: all 0.3s;
         }
         
         button:hover {
-            background-color: #ffcc44;
+            background: #ffdd44;
+            transform: translateY(-2px);
         }
         
-        .messages-container {
-            flex: 1;
-            background-color: rgba(0, 0, 0, 0.4);
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 20px;
-            overflow-y: auto;
+        .login-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
             display: flex;
-            flex-direction: column;
-        }
-        
-        .message {
-            margin-bottom: 15px;
-            padding: 10px 15px;
-            border-radius: 8px;
-            background-color: rgba(255, 255, 255, 0.1);
-            animation: fadeIn 0.3s;
-            max-width: 80%;
-        }
-        
-        .message.own-message {
-            align-self: flex-end;
-            background-color: rgba(253, 187, 45, 0.2);
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(5px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .message-header {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 5px;
-            font-size: 0.9rem;
-            color: #fdbb2d;
-        }
-        
-        .message-content {
-            font-size: 1rem;
-            line-height: 1.4;
-        }
-        
-        .message-input {
-            display: flex;
-        }
-        
-        .current-room {
-            margin-bottom: 15px;
-            font-size: 1.2rem;
-            color: #fdbb2d;
-            display: flex;
+            justify-content: center;
             align-items: center;
+            z-index: 100;
         }
         
-        .current-room span {
-            background-color: rgba(253, 187, 45, 0.2);
-            padding: 5px 10px;
-            border-radius: 8px;
-            margin-left: 10px;
-        }
-        
-        .user-info {
-            display: flex;
-            margin-bottom: 15px;
-        }
-        
-        .user-info input {
-            border-radius: 8px;
-            margin-right: 10px;
-        }
-        
-        .empty-state {
+        .login-form {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f);
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 400px;
             text-align: center;
-            padding: 40px 20px;
-            color: #aaa;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
         }
         
-        .empty-state h3 {
-            margin-bottom: 10px;
-            color: #fdbb2d;
+        .login-form h2 {
+            margin-bottom: 20px;
         }
         
-        .active-users {
-            margin-top: 10px;
-            font-size: 0.9rem;
-            color: #ccc;
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.9);
+        }
+        
+        .pop-animation {
+            animation: pop 0.5s forwards;
+        }
+        
+        @keyframes pop {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.5); opacity: 0.7; }
+            100% { transform: scale(0); opacity: 0; }
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            border-radius: 5px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            transform: translateX(150%);
+            transition: transform 0.3s;
+            z-index: 1000;
+        }
+        
+        .notification.show {
+            transform: translateX(0);
         }
         
         @media (max-width: 768px) {
-            .app-content {
-                flex-direction: column;
-                height: auto;
+            .game-area {
+                height: 400px;
             }
             
-            .rooms-section {
-                width: 100%;
-                border-right: none;
-                border-bottom: 1px solid #444;
-            }
-            
-            .message {
-                max-width: 90%;
+            h1 {
+                font-size: 2rem;
             }
         }
     </style>
 </head>
 <body>
+    <div class="login-screen" id="loginScreen">
+        <div class="login-form">
+            <h2>Join Bubble Pop Multiplayer</h2>
+            <input type="text" id="playerName" placeholder="Enter your name" maxlength="15">
+            <button id="joinGame">Join Game</button>
+        </div>
+    </div>
+
     <div class="container">
-        <div class="header">
-            <h1>Live Chat Rooms</h1>
-            <p>Join a room and start chatting instantly - No sign up required!</p>
+        <header>
+            <h1>Bubble Pop Multiplayer</h1>
+            <p>Pop bubbles and compete with other players in real-time!</p>
+        </header>
+        
+        <div class="game-info">
+            <div class="player-info">
+                <div>Player: <span id="displayName">You</span></div>
+                <div class="score">Score: <span id="playerScore">0</span></div>
+            </div>
+            <div class="room-info">
+                <div>Room: <span id="roomCode">Loading...</span></div>
+                <div>Players Online: <span id="playerCount">0</span></div>
+            </div>
         </div>
         
-        <div class="app-content">
-            <div class="rooms-section">
-                <h2 class="section-title">Available Rooms</h2>
-                <ul class="room-list" id="roomList">
-                    <!-- Rooms will be populated here -->
-                </ul>
-                
-                <div class="create-room">
-                    <h2 class="section-title">Create New Room</h2>
-                    <div class="input-group">
-                        <input type="text" id="newRoomName" placeholder="Enter room name">
-                        <button id="createRoomBtn">Create</button>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="chat-section">
-                <div class="current-room">
-                    Current Room: <span id="currentRoomName">Select a room to start chatting</span>
-                    <div class="active-users" id="activeUsersCount">0 users online</div>
-                </div>
-                
-                <div class="user-info">
-                    <input type="text" id="username" placeholder="Your display name">
-                    <button id="setUsernameBtn">Set Name</button>
-                </div>
-                
-                <div class="messages-container" id="messagesContainer">
-                    <div class="empty-state">
-                        <h3>Welcome to Live Chat!</h3>
-                        <p>Select a room from the left to start chatting or create a new one.</p>
-                    </div>
-                </div>
-                
-                <div class="message-input">
-                    <input type="text" id="messageInput" placeholder="Type your message here..." disabled>
-                    <button id="sendMessageBtn" disabled>Send</button>
-                </div>
+        <div class="game-area" id="gameArea">
+            <!-- Bubbles will be generated here -->
+        </div>
+        
+        <div class="players-list">
+            <h2>Players</h2>
+            <div id="playersContainer">
+                <!-- Player list will be populated here -->
             </div>
         </div>
+        
+        <div class="controls">
+            <button id="newBubbles">New Bubbles</button>
+            <button id="leaveGame">Leave Game</button>
+        </div>
+    </div>
+    
+    <div class="notification" id="notification">
+        <!-- Notifications will appear here -->
     </div>
 
     <script>
@@ -326,396 +277,223 @@
 
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+        const database = firebase.database();
 
+        // Game state
+        let playerId;
+        let playerName;
+        let playerScore = 0;
+        let roomId;
+        let bubbles = {};
+        
         // DOM elements
-        const roomList = document.getElementById('roomList');
-        const newRoomName = document.getElementById('newRoomName');
-        const createRoomBtn = document.getElementById('createRoomBtn');
-        const currentRoomName = document.getElementById('currentRoomName');
-        const activeUsersCount = document.getElementById('activeUsersCount');
-        const usernameInput = document.getElementById('username');
-        const setUsernameBtn = document.getElementById('setUsernameBtn');
-        const messagesContainer = document.getElementById('messagesContainer');
-        const messageInput = document.getElementById('messageInput');
-        const sendMessageBtn = document.getElementById('sendMessageBtn');
+        const loginScreen = document.getElementById('loginScreen');
+        const playerNameInput = document.getElementById('playerName');
+        const joinGameBtn = document.getElementById('joinGame');
+        const displayName = document.getElementById('displayName');
+        const playerScoreElement = document.getElementById('playerScore');
+        const roomCode = document.getElementById('roomCode');
+        const playerCount = document.getElementById('playerCount');
+        const gameArea = document.getElementById('gameArea');
+        const playersContainer = document.getElementById('playersContainer');
+        const newBubblesBtn = document.getElementById('newBubbles');
+        const leaveGameBtn = document.getElementById('leaveGame');
+        const notification = document.getElementById('notification');
 
-        // App state
-        let currentRoom = null;
-        let currentUser = `User${Math.floor(Math.random() * 10000)}`;
-        let userId = generateUserId();
-        let roomsListener = null;
-        let messagesListener = null;
-        let activeUsersListener = null;
-        let roomUserCountListeners = {};
-
-        // Set initial username
-        usernameInput.value = currentUser;
-
-        // Generate a random color for the user
-        const userColor = '#' + Math.floor(Math.random()*16777215).toString(16);
-
-        // Generate a unique user ID for this session
-        function generateUserId() {
-            let id = sessionStorage.getItem('chatUserId');
-            if (!id) {
-                id = 'user_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
-                sessionStorage.setItem('chatUserId', id);
-            }
-            return id;
+        // Generate a random ID
+        function generateId() {
+            return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
         }
 
-        // Load rooms from Firestore
-        function loadRooms() {
-            if (roomsListener) {
-                roomsListener();
-            }
-            
-            roomsListener = db.collection('rooms').onSnapshot(snapshot => {
-                roomList.innerHTML = '';
+        // Show notification
+        function showNotification(message) {
+            notification.textContent = message;
+            notification.classList.add('show');
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        // Join game
+        joinGameBtn.addEventListener('click', () => {
+            const name = playerNameInput.value.trim();
+            if (name) {
+                playerName = name;
+                displayName.textContent = name;
+                playerId = generateId();
+                roomId = 'main-room'; // Using a single room for simplicity
                 
-                if (snapshot.empty) {
-                    roomList.innerHTML = '<div class="empty-state"><p>No rooms available. Create one!</p></div>';
-                    return;
-                }
+                // Hide login screen
+                loginScreen.style.display = 'none';
                 
-                snapshot.forEach(doc => {
-                    const room = doc.data();
-                    const roomItem = createRoomElement(doc.id, room.name);
-                    roomList.appendChild(roomItem);
-                    
-                    // Set up user count listener for this room
-                    setupRoomUserCountListener(doc.id, roomItem);
-                });
-            }, error => {
-                console.error("Error loading rooms:", error);
-            });
-        }
-
-        // Create a room element
-        function createRoomElement(roomId, roomName) {
-            const roomItem = document.createElement('li');
-            roomItem.className = 'room-item';
-            roomItem.dataset.roomId = roomId;
-            
-            roomItem.innerHTML = `
-                <span>${roomName}</span>
-                <span class="user-count">0</span>
-            `;
-            
-            roomItem.addEventListener('click', () => {
-                joinRoom(roomId, roomName);
-            });
-            
-            return roomItem;
-        }
-
-        // Set up listener for user count in a room
-        function setupRoomUserCountListener(roomId, roomItem) {
-            // Remove existing listener if any
-            if (roomUserCountListeners[roomId]) {
-                roomUserCountListeners[roomId]();
-            }
-            
-            // Set up new listener for active users in this room
-            roomUserCountListeners[roomId] = db.collection('activeUsers')
-                .where('roomId', '==', roomId)
-                .where('isActive', '==', true)
-                .onSnapshot(snapshot => {
-                    const userCount = snapshot.size;
-                    const countElement = roomItem.querySelector('.user-count');
-                    if (countElement) {
-                        countElement.textContent = userCount;
-                    }
-                    
-                    // Update current room if this is the active room
-                    if (currentRoom === roomId) {
-                        updateActiveUsersDisplay(userCount);
-                    }
-                }, error => {
-                    console.error("Error listening to user count:", error);
-                });
-        }
-
-        // Update active users display for current room
-        function updateActiveUsersDisplay(count) {
-            activeUsersCount.textContent = `${count} user${count !== 1 ? 's' : ''} online`;
-        }
-
-        // Create a new room
-        createRoomBtn.addEventListener('click', () => {
-            const roomName = newRoomName.value.trim();
-            if (!roomName) {
-                alert('Please enter a room name');
-                return;
-            }
-            
-            db.collection('rooms').add({
-                name: roomName,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            }).then(() => {
-                newRoomName.value = '';
-            }).catch(error => {
-                console.error("Error creating room:", error);
-                alert('Error creating room. Please try again.');
-            });
-        });
-
-        // Join a room
-        function joinRoom(roomId, roomName) {
-            // Leave current room if any
-            if (currentRoom) {
-                leaveRoom(currentRoom);
-            }
-            
-            currentRoom = roomId;
-            currentRoomName.textContent = roomName;
-            
-            // Highlight selected room
-            document.querySelectorAll('.room-item').forEach(item => {
-                item.classList.remove('active');
-                if (item.dataset.roomId === roomId) {
-                    item.classList.add('active');
-                }
-            });
-            
-            // Enable message input
-            messageInput.disabled = false;
-            sendMessageBtn.disabled = false;
-            
-            // Add user to active users
-            const userRef = db.collection('activeUsers').doc(userId);
-            userRef.set({
-                userId: userId,
-                username: currentUser,
-                roomId: roomId,
-                userColor: userColor,
-                joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                lastActive: firebase.firestore.FieldValue.serverTimestamp(),
-                isActive: true
-            }).catch(error => {
-                console.error("Error adding user to active users:", error);
-            });
-            
-            // Load messages for this room
-            loadMessages(roomId);
-            
-            // Add join message
-            addSystemMessage(`${currentUser} joined the room`);
-        }
-
-        // Leave a room
-        function leaveRoom(roomId) {
-            if (!roomId) return;
-            
-            // Mark user as inactive
-            db.collection('activeUsers').doc(userId).update({
-                isActive: false,
-                leftAt: firebase.firestore.FieldValue.serverTimestamp()
-            }).catch(error => {
-                console.error("Error marking user as inactive:", error);
-            });
-            
-            // Remove messages listener
-            if (messagesListener) {
-                messagesListener();
-            }
-            
-            // Remove active users listener
-            if (activeUsersListener) {
-                activeUsersListener();
-            }
-            
-            // Clear messages container
-            messagesContainer.innerHTML = '<div class="empty-state"><p>Select a room to start chatting</p></div>';
-            
-            // Add leave message
-            addSystemMessage(`${currentUser} left the room`);
-            
-            // Reset current room
-            currentRoom = null;
-            currentRoomName.textContent = 'Select a room to start chatting';
-            activeUsersCount.textContent = '0 users online';
-            messageInput.disabled = true;
-            sendMessageBtn.disabled = true;
-        }
-
-        // Load messages for a room
-        function loadMessages(roomId) {
-            if (messagesListener) {
-                messagesListener();
-            }
-            
-            messagesContainer.innerHTML = '';
-            
-            messagesListener = db.collection('rooms').doc(roomId)
-                .collection('messages')
-                .orderBy('timestamp', 'asc')
-                .onSnapshot(snapshot => {
-                    messagesContainer.innerHTML = '';
-                    
-                    snapshot.forEach(doc => {
-                        displayMessage(doc.data());
-                    });
-                    
-                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                }, error => {
-                    console.error("Error loading messages:", error);
-                messagesContainer.innerHTML = '<div class="empty-state"><p>Error loading messages</p></div>';
-                });
-        }
-
-        // Display a message in the chat
-        function displayMessage(message) {
-            const messageElement = document.createElement('div');
-            messageElement.className = 'message';
-            
-            if (message.userId === userId) {
-                messageElement.classList.add('own-message');
-            }
-            
-            if (message.type === 'system') {
-                messageElement.innerHTML = `
-                    <div class="message-content" style="text-align: center; color: #fdbb2d; font-style: italic;">
-                        ${message.text}
-                    </div>
-                `;
+                // Initialize game
+                initializeGame();
             } else {
-                messageElement.innerHTML = `
-                    <div class="message-header">
-                        <span style="color: ${message.userColor || '#fdbb2d'}">${message.user}</span>
-                        <span>${formatTimestamp(message.timestamp)}</span>
-                    </div>
-                    <div class="message-content">${message.text}</div>
+                alert('Please enter your name');
+            }
+        });
+
+        // Initialize game
+        function initializeGame() {
+            // Set room code
+            roomCode.textContent = roomId;
+            
+            // Create player in database
+            const playerRef = database.ref(`rooms/${roomId}/players/${playerId}`);
+            playerRef.set({
+                name: playerName,
+                score: playerScore
+            });
+            
+            // Listen for player updates
+            database.ref(`rooms/${roomId}/players`).on('value', (snapshot) => {
+                const players = snapshot.val() || {};
+                updatePlayersList(players);
+                playerCount.textContent = Object.keys(players).length;
+            });
+            
+            // Listen for bubble updates
+            database.ref(`rooms/${roomId}/bubbles`).on('value', (snapshot) => {
+                const bubblesData = snapshot.val() || {};
+                updateBubbles(bubblesData);
+            });
+            
+            // Generate initial bubbles
+            generateBubbles(10);
+            
+            // Set up event listeners
+            newBubblesBtn.addEventListener('click', () => {
+                generateBubbles(10);
+            });
+            
+            leaveGameBtn.addEventListener('click', () => {
+                // Remove player from database
+                database.ref(`rooms/${roomId}/players/${playerId}`).remove();
+                // Show login screen
+                loginScreen.style.display = 'flex';
+                // Reset game area
+                gameArea.innerHTML = '';
+                playerScore = 0;
+                playerScoreElement.textContent = '0';
+            });
+        }
+
+        // Update players list
+        function updatePlayersList(players) {
+            playersContainer.innerHTML = '';
+            
+            // Convert to array and sort by score
+            const playersArray = Object.entries(players).map(([id, data]) => ({
+                id,
+                ...data
+            }));
+            
+            playersArray.sort((a, b) => b.score - a.score);
+            
+            playersArray.forEach(player => {
+                const playerElement = document.createElement('div');
+                playerElement.className = 'player-item';
+                playerElement.innerHTML = `
+                    <span class="player-name">${player.name} ${player.id === playerId ? '(You)' : ''}</span>
+                    <span class="player-score">${player.score}</span>
                 `;
-            }
-            
-            messagesContainer.appendChild(messageElement);
-        }
-
-        // Add a system message
-        function addSystemMessage(text) {
-            if (!currentRoom) return;
-            
-            db.collection('rooms').doc(currentRoom).collection('messages').add({
-                type: 'system',
-                text: text,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                playersContainer.appendChild(playerElement);
             });
         }
 
-        // Send a message
-        sendMessageBtn.addEventListener('click', sendMessage);
-        messageInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                sendMessage();
-            }
-        });
-
-        function sendMessage() {
-            const messageText = messageInput.value.trim();
-            if (!messageText || !currentRoom) return;
+        // Generate bubbles
+        function generateBubbles(count) {
+            const bubblesRef = database.ref(`rooms/${roomId}/bubbles`);
             
-            db.collection('rooms').doc(currentRoom).collection('messages').add({
-                type: 'user',
-                user: currentUser,
-                userId: userId,
-                userColor: userColor,
-                text: messageText,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
-            }).then(() => {
-                messageInput.value = '';
-            }).catch(error => {
-                console.error("Error sending message:", error);
-                alert('Error sending message. Please try again.');
-            });
-        }
-
-        // Set username
-        setUsernameBtn.addEventListener('click', () => {
-            const newUsername = usernameInput.value.trim();
-            if (!newUsername) {
-                alert('Please enter a username');
-                return;
-            }
+            // Clear existing bubbles
+            bubblesRef.remove();
             
-            const oldUsername = currentUser;
-            currentUser = newUsername;
-            
-            // Update active user document if in a room
-            if (currentRoom) {
-                db.collection('activeUsers').doc(userId).update({
-                    username: currentUser,
-                    lastActive: firebase.firestore.FieldValue.serverTimestamp()
-                }).catch(error => {
-                    console.error("Error updating username:", error);
-                });
+            // Generate new bubbles
+            for (let i = 0; i < count; i++) {
+                const bubbleId = generateId();
+                const size = Math.floor(Math.random() * 40) + 30; // 30-70px
+                const x = Math.random() * (gameArea.offsetWidth - size);
+                const y = Math.random() * (gameArea.offsetHeight - size);
                 
-                // Add system message about username change
-                addSystemMessage(`${oldUsername} changed their name to ${currentUser}`);
+                // Random color
+                const hue = Math.floor(Math.random() * 360);
+                const color = `hsl(${hue}, 70%, 60%)`;
+                
+                bubblesRef.child(bubbleId).set({
+                    x,
+                    y,
+                    size,
+                    color
+                });
             }
-        });
+        }
 
-        // Format timestamp
-        function formatTimestamp(timestamp) {
-            if (!timestamp) return '';
+        // Update bubbles on screen
+        function updateBubbles(bubblesData) {
+            // Remove bubbles that no longer exist
+            Object.keys(bubbles).forEach(bubbleId => {
+                if (!bubblesData[bubbleId]) {
+                    const bubbleElement = document.getElementById(bubbleId);
+                    if (bubbleElement) {
+                        bubbleElement.classList.add('pop-animation');
+                        setTimeout(() => {
+                            if (bubbleElement.parentNode) {
+                                bubbleElement.parentNode.removeChild(bubbleElement);
+                            }
+                        }, 500);
+                    }
+                    delete bubbles[bubbleId];
+                }
+            });
             
-            const date = timestamp.toDate();
-            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            // Add new bubbles
+            Object.entries(bubblesData).forEach(([bubbleId, bubbleData]) => {
+                if (!bubbles[bubbleId]) {
+                    createBubbleElement(bubbleId, bubbleData);
+                    bubbles[bubbleId] = bubbleData;
+                }
+            });
         }
 
-        // Clean up inactive users (runs periodically)
-        function cleanupInactiveUsers() {
-            const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+        // Create bubble element
+        function createBubbleElement(bubbleId, bubbleData) {
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            bubble.id = bubbleId;
             
-            db.collection('activeUsers')
-                .where('lastActive', '<', firebase.firestore.Timestamp.fromDate(fiveMinutesAgo))
-                .get()
-                .then(snapshot => {
-                    snapshot.forEach(doc => {
-                        doc.ref.delete().catch(error => {
-                            console.error("Error deleting inactive user:", error);
-                        });
-                    });
-                })
-                .catch(error => {
-                    console.error("Error cleaning up inactive users:", error);
-                });
+            bubble.style.width = `${bubbleData.size}px`;
+            bubble.style.height = `${bubbleData.size}px`;
+            bubble.style.left = `${bubbleData.x}px`;
+            bubble.style.top = `${bubbleData.y}px`;
+            bubble.style.backgroundColor = bubbleData.color;
+            
+            bubble.addEventListener('click', () => {
+                popBubble(bubbleId);
+            });
+            
+            gameArea.appendChild(bubble);
         }
 
-        // Update last active timestamp periodically
-        function updateLastActive() {
-            if (currentRoom) {
-                db.collection('activeUsers').doc(userId).update({
-                    lastActive: firebase.firestore.FieldValue.serverTimestamp()
-                }).catch(error => {
-                    console.error("Error updating last active:", error);
-                });
-            }
+        // Pop bubble
+        function popBubble(bubbleId) {
+            // Remove bubble from database
+            database.ref(`rooms/${roomId}/bubbles/${bubbleId}`).remove();
+            
+            // Update score
+            playerScore += 10;
+            playerScoreElement.textContent = playerScore;
+            
+            // Update player score in database
+            database.ref(`rooms/${roomId}/players/${playerId}/score`).set(playerScore);
+            
+            // Show notification
+            showNotification(`+10 points!`);
         }
 
-        // Initialize the app
-        loadRooms();
-
-        // Set up periodic tasks
-        setInterval(cleanupInactiveUsers, 60000);
-        setInterval(updateLastActive, 30000);
-
-        // Handle page unload
-        window.addEventListener('beforeunload', () => {
-            if (currentRoom) {
-                leaveRoom(currentRoom);
-            }
-        });
-
-        // Handle page visibility change
-        document.addEventListener('visibilitychange', () => {
-            if (currentRoom) {
-                db.collection('activeUsers').doc(userId).update({
-                    lastActive: firebase.firestore.FieldValue.serverTimestamp()
-                }).catch(error => {
-                    console.error("Error updating last active:", error);
-                });
+        // Allow Enter key to submit name
+        playerNameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                joinGameBtn.click();
             }
         });
     </script>
