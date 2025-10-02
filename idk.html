@@ -1,107 +1,203 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Firebase Note Sharing</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f5f5f5;
-      margin: 0;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    h1 {
-      color: #333;
-    }
-    #noteForm {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 20px;
-    }
-    input, button {
-      padding: 10px;
-      border-radius: 5px;
-      border: 1px solid #ccc;
-    }
-    button {
-      background: #007BFF;
-      color: white;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #0056b3;
-    }
-    .note {
-      background: white;
-      padding: 10px;
-      margin: 5px 0;
-      width: 300px;
-      border-radius: 5px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-  </style>
-</head>
-<body>
-  <h1>Firebase Note Sharing</h1>
-  
-  <form id="noteForm">
-    <input type="text" id="noteInput" placeholder="Write a note..." required />
-    <button type="submit">Add</button>
-  </form>
-  
-  <div id="notes"></div>
+// Authentication Functions
+async function signUp() {
+    const email = document.getElementById('signup-email').value;
+    const password = document.getElementById('signup-password').value;
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-  
-  <script>
-    // Your Firebase Config
-    const firebaseConfig = {
-      apiKey: "AIzaSyD0T-mS__FlN3QASJnmD0K6S5VNDiN2bxQ",
-      authDomain: "poplol-7209f.firebaseapp.com",
-      projectId: "poplol-7209f",
-      storageBucket: "poplol-7209f.appspot.com",
-      messagingSenderId: "105810834",
-      appId: "1:105810834:web:example"
-    };
+    try {
+        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+        const user = userCredential.user;
+        updateAuthStatus(`Signed up successfully! User: ${user.email}`, 'success');
+        
+        // Clear form
+        document.getElementById('signup-email').value = '';
+        document.getElementById('signup-password').value = '';
+    } catch (error) {
+        updateAuthStatus(`Sign up error: ${error.message}`, 'error');
+    }
+}
 
-    // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+async function signIn() {
+    const email = document.getElementById('signin-email').value;
+    const password = document.getElementById('signin-password').value;
 
-    const noteForm = document.getElementById("noteForm");
-    const noteInput = document.getElementById("noteInput");
-    const notesDiv = document.getElementById("notes");
+    try {
+        const userCredential = await auth.signInWithEmailAndPassword(email, password);
+        const user = userCredential.user;
+        updateAuthStatus(`Signed in as: ${user.email}`, 'success');
+        
+        // Clear form
+        document.getElementById('signin-email').value = '';
+        document.getElementById('signin-password').value = '';
+    } catch (error) {
+        updateAuthStatus(`Sign in error: ${error.message}`, 'error');
+    }
+}
 
-    // Add Note
-    noteForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const note = noteInput.value.trim();
-      if(note){
-        await db.collection("notes").add({
-          text: note,
-          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+async function signOut() {
+    try {
+        await auth.signOut();
+        updateAuthStatus('Signed out successfully', 'success');
+    } catch (error) {
+        updateAuthStatus(`Sign out error: ${error.message}`, 'error');
+    }
+}
+
+function updateAuthStatus(message, type) {
+    const authStatus = document.getElementById('auth-status');
+    authStatus.textContent = message;
+    authStatus.className = type;
+}
+
+// Database Functions
+async function addItem() {
+    if (!auth.currentUser) {
+        alert('Please sign in first');
+        return;
+    }
+
+    const name = document.getElementById('item-name').value;
+    const description = document.getElementById('item-description').value;
+
+    if (!name || !description) {
+        alert('Please fill in all fields');
+        return;
+    }
+
+    try {
+        await db.collection('items').add({
+            name: name,
+            description: description,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            userId: auth.currentUser.uid
         });
-        noteInput.value = "";
-      }
-    });
 
-    // Show Notes in Real-time
-    db.collection("notes").orderBy("timestamp","desc").onSnapshot(snapshot => {
-      notesDiv.innerHTML = "";
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        const div = document.createElement("div");
-        div.classList.add("note");
-        div.textContent = data.text;
-        notesDiv.appendChild(div);
-      });
-    });
-  </script>
-</body>
-</html>
+        // Clear form
+        document.getElementById('item-name').value = '';
+        document.getElementById('item-description').value = '';
+        
+        loadItems();
+    } catch (error) {
+        console.error('Error adding item:', error);
+    }
+}
+
+async function loadItems() {
+    try {
+        const itemsSnapshot = await db.collection('items')
+            .orderBy('createdAt', 'desc')
+            .get();
+        
+        const itemsList = document.getElementById('items-list');
+        itemsList.innerHTML = '';
+
+        itemsSnapshot.forEach(doc => {
+            const item = doc.data();
+            const itemElement = document.createElement('div');
+            itemElement.className = 'item';
+            itemElement.innerHTML = `
+                <h4>${item.name}</h4>
+                <p>${item.description}</p>
+                <small>Created by: ${item.userId}</small>
+                <button class="delete-btn" onclick="deleteItem('${doc.id}')">Delete</button>
+            `;
+            itemsList.appendChild(itemElement);
+        });
+    } catch (error) {
+        console.error('Error loading items:', error);
+    }
+}
+
+async function deleteItem(itemId) {
+    if (!auth.currentUser) {
+        alert('Please sign in first');
+        return;
+    }
+
+    try {
+        await db.collection('items').doc(itemId).delete();
+        loadItems();
+    } catch (error) {
+        console.error('Error deleting item:', error);
+    }
+}
+
+// Storage Functions
+async function uploadFile() {
+    if (!auth.currentUser) {
+        alert('Please sign in first');
+        return;
+    }
+
+    const fileInput = document.getElementById('file-upload');
+    const file = fileInput.files[0];
+
+    if (!file) {
+        alert('Please select a file');
+        return;
+    }
+
+    try {
+        const storageRef = storage.ref();
+        const fileRef = storageRef.child(`files/${auth.currentUser.uid}/${file.name}`);
+        
+        const snapshot = await fileRef.put(file);
+        const downloadURL = await snapshot.ref.getDownloadURL();
+        
+        // Save file info to Firestore
+        await db.collection('files').add({
+            name: file.name,
+            url: downloadURL,
+            uploadedBy: auth.currentUser.uid,
+            uploadedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        fileInput.value = '';
+        loadFiles();
+    } catch (error) {
+        console.error('Error uploading file:', error);
+    }
+}
+
+async function loadFiles() {
+    try {
+        const filesSnapshot = await db.collection('files')
+            .orderBy('uploadedAt', 'desc')
+            .get();
+        
+        const filesList = document.getElementById('uploaded-files');
+        filesList.innerHTML = '';
+
+        filesSnapshot.forEach(doc => {
+            const file = doc.data();
+            const fileElement = document.createElement('div');
+            fileElement.className = 'file-item';
+            fileElement.innerHTML = `
+                <h4>${file.name}</h4>
+                <a href="${file.url}" target="_blank">Download</a>
+                <small>Uploaded by: ${file.uploadedBy}</small>
+            `;
+            filesList.appendChild(fileElement);
+        });
+    } catch (error) {
+        console.error('Error loading files:', error);
+    }
+}
+
+// Auth State Listener
+auth.onAuthStateChanged((user) => {
+    if (user) {
+        updateAuthStatus(`Logged in as: ${user.email}`, 'success');
+        loadItems();
+        loadFiles();
+    } else {
+        updateAuthStatus('Not logged in', 'error');
+        document.getElementById('items-list').innerHTML = '';
+        document.getElementById('uploaded-files').innerHTML = '';
+    }
+});
+
+// Initialize the app
+document.addEventListener('DOMContentLoaded', function() {
+    loadItems();
+    loadFiles();
+});
