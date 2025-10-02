@@ -1,470 +1,206 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2D Multiplayer Game</title>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: white;
-            overflow: hidden;
-        }
-        
-        .game-container {
-            position: relative;
-            width: 800px;
-            height: 500px;
-            border: 3px solid rgba(255, 255, 255, 0.7);
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            background-color: rgba(0, 0, 0, 0.3);
-        }
-        
-        #gameCanvas {
-            background-color: rgba(0, 0, 0, 0.5);
-        }
-        
-        .player {
-            position: absolute;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            color: white;
-            text-shadow: 1px 1px 2px black;
-            transition: transform 0.1s;
-        }
-        
-        .controls {
-            margin-top: 20px;
-            display: flex;
-            gap: 15px;
-        }
-        
-        button {
-            padding: 10px 20px;
-            background: rgba(255, 255, 255, 0.2);
-            border: 2px solid white;
-            border-radius: 5px;
-            color: white;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        button:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: translateY(-2px);
-        }
-        
-        .info-panel {
-            margin-top: 20px;
-            padding: 15px;
-            background: rgba(0, 0, 0, 0.5);
-            border-radius: 10px;
-            width: 800px;
-            text-align: center;
-        }
-        
-        .player-count {
-            font-size: 18px;
-            margin-bottom: 10px;
-        }
-        
-        .instructions {
-            font-size: 14px;
-            opacity: 0.8;
-        }
-        
-        .player-name {
-            position: absolute;
-            top: -20px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 12px;
-            white-space: nowrap;
-        }
-        
-        .login-panel {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.8);
-            padding: 30px;
-            border-radius: 15px;
-            text-align: center;
-            z-index: 10;
-            box-shadow: 0 0 30px rgba(0, 0, 0, 0.7);
-        }
-        
-        input {
-            padding: 10px;
-            margin: 10px 0;
-            border: 2px solid rgba(255, 255, 255, 0.5);
-            border-radius: 5px;
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            width: 200px;
-        }
-        
-        input::placeholder {
-            color: rgba(255, 255, 255, 0.7);
-        }
-        
-        h1 {
-            margin-top: 0;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-        }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Firebase Notes — Simple App</title>
+  <style>
+    :root{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#111}
+    body{margin:0;padding:28px;background:#f7f8fa}
+    .container{max-width:900px;margin:0 auto;background:#fff;border-radius:12px;padding:24px;box-shadow:0 6px 24px rgba(22,27,34,0.08)}
+    h1{margin:0 0 12px;font-size:20px}
+    .row{display:flex;gap:12px;align-items:center}
+    input,textarea,button{font:inherit;padding:10px;border:1px solid #e6e8eb;border-radius:8px}
+    input[type=email],input[type=password]{width:220px}
+    textarea{width:100%;min-height:72px}
+    .notes{margin-top:18px}
+    .note{padding:12px;border:1px solid #eef0f3;border-radius:8px;margin-bottom:10px;background:#fdfdfd}
+    .meta{font-size:12px;color:#666;margin-bottom:6px}
+    .actions{margin-left:auto}
+    .muted{color:#7a7f87;font-size:13px}
+    .center{display:flex;align-items:center;gap:8px}
+    .hidden{display:none}
+    .signout{background:#fff;border:1px solid #e6e8eb;padding:8px 12px;border-radius:8px}
+  </style>
 </head>
 <body>
-    <h1>2D Multiplayer Arena</h1>
-    
-    <div class="game-container">
-        <canvas id="gameCanvas" width="800" height="500"></canvas>
-        <div id="playersContainer"></div>
-        
-        <div class="login-panel" id="loginPanel">
-            <h2>Join the Game</h2>
-            <input type="text" id="playerNameInput" placeholder="Enter your name" maxlength="15">
-            <br>
-            <button id="joinGameBtn">Join Game</button>
+  <div class="container">
+    <div class="row">
+      <h1>Firebase Notes — Simple Project</h1>
+      <div class="actions" id="auth-actions"></div>
+    </div>
+
+    <!-- Auth UI -->
+    <div id="auth-ui">
+      <p class="muted">Create an account or sign in with email/password.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+        <input id="email" type="email" placeholder="Email" />
+        <input id="password" type="password" placeholder="Password" />
+        <button id="signup">Sign up</button>
+        <button id="signin">Sign in</button>
+      </div>
+    </div>
+
+    <!-- App UI -->
+    <div id="app-ui" class="hidden">
+      <div class="row" style="margin-bottom:12px">
+        <div class="center">
+          <strong id="user-email"></strong>
+          <span class="muted" id="user-uid"></span>
         </div>
-    </div>
-    
-    <div class="controls">
-        <button id="upBtn">↑ Up</button>
-        <button id="leftBtn">← Left</button>
-        <button id="downBtn">↓ Down</button>
-        <button id="rightBtn">→ Right</button>
-        <button id="leaveBtn">Leave Game</button>
-    </div>
-    
-    <div class="info-panel">
-        <div class="player-count">Players Online: <span id="playerCount">0</span></div>
-        <div class="instructions">Use arrow buttons or WASD keys to move. Collect coins to increase your score!</div>
+        <div class="actions">
+          <button id="signout" class="signout">Sign out</button>
+        </div>
+      </div>
+
+      <form id="note-form">
+        <textarea id="note-text" placeholder="Write a note... (max 500 chars)" maxlength="500"></textarea>
+        <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+          <input id="note-title" placeholder="Optional title" />
+          <button type="submit">Save note</button>
+        </div>
+      </form>
+
+      <div class="notes" id="notes-list">
+        <p class="muted">Loading notes...</p>
+      </div>
     </div>
 
-    <script>
-        // Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyDrHe4VwIFCyUI4u8-WwbcncSppJqf7AW4",
-            authDomain: "new-1-15bbf.firebaseapp.com",
-            projectId: "new-1-15bbf",
-            storageBucket: "new-1-15bbf.firebasestorage.app",
-            messagingSenderId: "25831911925",
-            appId: "1:25831911925:web:bf664020e248a5f239f0bc",
-            measurementId: "G-KY3MJVJ0EM"
-        };
+    <p class="muted" style="margin-top:18px">Notes are stored in Firestore. Make sure Email/Password auth and Firestore are enabled in your Firebase console.</p>
+  </div>
 
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
+  <!-- Firebase (compat) SDKs from CDN -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 
-        // Game variables
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const playersContainer = document.getElementById('playersContainer');
-        const playerCountElement = document.getElementById('playerCount');
-        const loginPanel = document.getElementById('loginPanel');
-        const playerNameInput = document.getElementById('playerNameInput');
-        const joinGameBtn = document.getElementById('joinGameBtn');
-        const leaveBtn = document.getElementById('leaveBtn');
-        
-        let playerId = null;
-        let playerName = '';
-        let players = {};
-        let coins = [];
-        let myPlayer = {
-            x: 400,
-            y: 250,
-            color: '#3498db',
-            score: 0,
-            name: ''
-        };
-        
-        // Generate random coins
-        function generateCoins() {
-            coins = [];
-            for (let i = 0; i < 20; i++) {
-                coins.push({
-                    x: Math.random() * (canvas.width - 20) + 10,
-                    y: Math.random() * (canvas.height - 20) + 10,
-                    collected: false
-                });
-            }
-        }
-        
-        // Draw coins on canvas
-        function drawCoins() {
-            ctx.fillStyle = '#f1c40f';
-            for (let coin of coins) {
-                if (!coin.collected) {
-                    ctx.beginPath();
-                    ctx.arc(coin.x, coin.y, 8, 0, Math.PI * 2);
-                    ctx.fill();
-                    
-                    ctx.fillStyle = '#e67e22';
-                    ctx.beginPath();
-                    ctx.arc(coin.x, coin.y, 5, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.fillStyle = '#f1c40f';
-                }
-            }
-        }
-        
-        // Draw game background
-        function drawBackground() {
-            // Draw grid
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-            ctx.lineWidth = 1;
-            
-            for (let x = 0; x < canvas.width; x += 50) {
-                ctx.beginPath();
-                ctx.moveTo(x, 0);
-                ctx.lineTo(x, canvas.height);
-                ctx.stroke();
-            }
-            
-            for (let y = 0; y < canvas.height; y += 50) {
-                ctx.beginPath();
-                ctx.moveTo(0, y);
-                ctx.lineTo(canvas.width, y);
-                ctx.stroke();
-            }
-            
-            // Draw border
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-            ctx.lineWidth = 3;
-            ctx.strokeRect(0, 0, canvas.width, canvas.height);
-        }
-        
-        // Draw game
-        function drawGame() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            drawBackground();
-            drawCoins();
-            
-            // Draw player scores
-            ctx.fillStyle = 'white';
-            ctx.font = '16px Arial';
-            ctx.textAlign = 'left';
-            let yPos = 30;
-            
-            for (let id in players) {
-                const player = players[id];
-                ctx.fillText(`${player.name}: ${player.score}`, 20, yPos);
-                yPos += 25;
-            }
-        }
-        
-        // Update player position in Firebase
-        function updatePlayerPosition() {
-            if (playerId) {
-                database.ref('players/' + playerId).update({
-                    x: myPlayer.x,
-                    y: myPlayer.y,
-                    color: myPlayer.color,
-                    score: myPlayer.score,
-                    name: myPlayer.name,
-                    lastUpdate: firebase.database.ServerValue.TIMESTAMP
-                });
-            }
-        }
-        
-        // Check for coin collection
-        function checkCoinCollection() {
-            for (let i = 0; i < coins.length; i++) {
-                const coin = coins[i];
-                if (!coin.collected) {
-                    const dx = myPlayer.x - coin.x;
-                    const dy = myPlayer.y - coin.y;
-                    const distance = Math.sqrt(dx * dx + dy * dy);
-                    
-                    if (distance < 25) { // Player radius + coin radius
-                        coin.collected = true;
-                        myPlayer.score += 10;
-                        
-                        // Update score in Firebase
-                        if (playerId) {
-                            database.ref('players/' + playerId).update({
-                                score: myPlayer.score
-                            });
-                        }
-                        
-                        // Respawn coin after a delay
-                        setTimeout(() => {
-                            coin.x = Math.random() * (canvas.width - 20) + 10;
-                            coin.y = Math.random() * (canvas.height - 20) + 10;
-                            coin.collected = false;
-                        }, 2000);
-                    }
-                }
-            }
-        }
-        
-        // Join game
-        joinGameBtn.addEventListener('click', () => {
-            playerName = playerNameInput.value.trim();
-            if (playerName === '') {
-                playerName = 'Player' + Math.floor(Math.random() * 1000);
-            }
-            
-            myPlayer.name = playerName;
-            myPlayer.color = `hsl(${Math.random() * 360}, 70%, 60%)`;
-            
-            // Create player in Firebase
-            const playerRef = database.ref('players').push();
-            playerId = playerRef.key;
-            
-            playerRef.set({
-                x: myPlayer.x,
-                y: myPlayer.y,
-                color: myPlayer.color,
-                score: 0,
-                name: myPlayer.name,
-                lastUpdate: firebase.database.ServerValue.TIMESTAMP
-            });
-            
-            loginPanel.style.display = 'none';
-            
-            // Start game loop
-            setInterval(gameLoop, 1000 / 60);
+  <script>
+    // --- Firebase config (use the config the user provided) ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyDrHe4VwIFCyUI4u8-WwbcncSppJqf7AW4",
+      authDomain: "new-1-15bbf.firebaseapp.com",
+      projectId: "new-1-15bbf",
+      storageBucket: "new-1-15bbf.firebasestorage.app",
+      messagingSenderId: "25831911925",
+      appId: "1:25831911925:web:bf664020e248a5f239f0bc",
+      measurementId: "G-KY3MJVJ0EM"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    // UI refs
+    const authUI = document.getElementById('auth-ui');
+    const appUI = document.getElementById('app-ui');
+    const emailIn = document.getElementById('email');
+    const passIn = document.getElementById('password');
+    const signupBtn = document.getElementById('signup');
+    const signinBtn = document.getElementById('signin');
+    const signoutBtn = document.getElementById('signout');
+    const userEmailLabel = document.getElementById('user-email');
+    const userUidLabel = document.getElementById('user-uid');
+    const noteForm = document.getElementById('note-form');
+    const noteText = document.getElementById('note-text');
+    const noteTitle = document.getElementById('note-title');
+    const notesList = document.getElementById('notes-list');
+
+    // Sign up
+    signupBtn.addEventListener('click', async () => {
+      const email = emailIn.value.trim();
+      const password = passIn.value;
+      if (!email || !password) return alert('Provide email and password');
+      try {
+        await auth.createUserWithEmailAndPassword(email, password);
+      } catch (err) {
+        alert('Sign up error: ' + err.message);
+      }
+    });
+
+    // Sign in
+    signinBtn.addEventListener('click', async () => {
+      const email = emailIn.value.trim();
+      const password = passIn.value;
+      if (!email || !password) return alert('Provide email and password');
+      try {
+        await auth.signInWithEmailAndPassword(email, password);
+      } catch (err) {
+        alert('Sign in error: ' + err.message);
+      }
+    });
+
+    // Sign out
+    signoutBtn.addEventListener('click', () => auth.signOut());
+
+    // Auth state
+    let unsubscribeNotes = null;
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        authUI.classList.add('hidden');
+        appUI.classList.remove('hidden');
+        userEmailLabel.textContent = user.email || 'Anonymous';
+        userUidLabel.textContent = ' — ' + user.uid;
+        // Start listening to notes
+        if (unsubscribeNotes) unsubscribeNotes();
+        const notesRef = db.collection('notes').orderBy('createdAt', 'desc').limit(100);
+        unsubscribeNotes = notesRef.onSnapshot(snapshot => {
+          renderNotes(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
         });
-        
-        // Leave game
-        leaveBtn.addEventListener('click', () => {
-            if (playerId) {
-                database.ref('players/' + playerId).remove();
-                playerId = null;
-                loginPanel.style.display = 'block';
-                
-                // Clear players
-                players = {};
-                playersContainer.innerHTML = '';
-                playerCountElement.textContent = '0';
-            }
+      } else {
+        authUI.classList.remove('hidden');
+        appUI.classList.add('hidden');
+        userEmailLabel.textContent = '';
+        userUidLabel.textContent = '';
+        if (unsubscribeNotes) { unsubscribeNotes(); unsubscribeNotes = null; }
+      }
+    });
+
+    // Add note
+    noteForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const text = noteText.value.trim();
+      const title = noteTitle.value.trim();
+      const user = auth.currentUser;
+      if (!user) return alert('You must be signed in');
+      if (!text) return alert('Note cannot be empty');
+      try {
+        await db.collection('notes').add({
+          uid: user.uid,
+          email: user.email || null,
+          title: title || null,
+          text,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-        
-        // Game loop
-        function gameLoop() {
-            checkCoinCollection();
-            updatePlayerPosition();
-            drawGame();
-        }
-        
-        // Listen for other players
-        database.ref('players').on('value', (snapshot) => {
-            players = snapshot.val() || {};
-            
-            // Update player count
-            playerCountElement.textContent = Object.keys(players).length;
-            
-            // Clear existing player elements
-            playersContainer.innerHTML = '';
-            
-            // Create player elements
-            for (let id in players) {
-                const player = players[id];
-                
-                // Skip our own player (we'll handle it separately)
-                if (id === playerId) continue;
-                
-                // Remove inactive players (more than 5 seconds since last update)
-                if (Date.now() - player.lastUpdate > 5000) {
-                    database.ref('players/' + id).remove();
-                    continue;
-                }
-                
-                const playerElement = document.createElement('div');
-                playerElement.className = 'player';
-                playerElement.style.backgroundColor = player.color;
-                playerElement.style.left = (player.x - 15) + 'px';
-                playerElement.style.top = (player.y - 15) + 'px';
-                playerElement.textContent = player.score;
-                
-                const nameElement = document.createElement('div');
-                nameElement.className = 'player-name';
-                nameElement.textContent = player.name;
-                playerElement.appendChild(nameElement);
-                
-                playersContainer.appendChild(playerElement);
-            }
-        });
-        
-        // Movement controls
-        const moveSpeed = 5;
-        const keys = {};
-        
-        window.addEventListener('keydown', (e) => {
-            keys[e.key] = true;
-        });
-        
-        window.addEventListener('keyup', (e) => {
-            keys[e.key] = false;
-        });
-        
-        // Button controls
-        document.getElementById('upBtn').addEventListener('mousedown', () => keys['ArrowUp'] = true);
-        document.getElementById('upBtn').addEventListener('mouseup', () => keys['ArrowUp'] = false);
-        document.getElementById('upBtn').addEventListener('touchstart', () => keys['ArrowUp'] = true);
-        document.getElementById('upBtn').addEventListener('touchend', () => keys['ArrowUp'] = false);
-        
-        document.getElementById('leftBtn').addEventListener('mousedown', () => keys['ArrowLeft'] = true);
-        document.getElementById('leftBtn').addEventListener('mouseup', () => keys['ArrowLeft'] = false);
-        document.getElementById('leftBtn').addEventListener('touchstart', () => keys['ArrowLeft'] = true);
-        document.getElementById('leftBtn').addEventListener('touchend', () => keys['ArrowLeft'] = false);
-        
-        document.getElementById('downBtn').addEventListener('mousedown', () => keys['ArrowDown'] = true);
-        document.getElementById('downBtn').addEventListener('mouseup', () => keys['ArrowDown'] = false);
-        document.getElementById('downBtn').addEventListener('touchstart', () => keys['ArrowDown'] = true);
-        document.getElementById('downBtn').addEventListener('touchend', () => keys['ArrowDown'] = false);
-        
-        document.getElementById('rightBtn').addEventListener('mousedown', () => keys['ArrowRight'] = true);
-        document.getElementById('rightBtn').addEventListener('mouseup', () => keys['ArrowRight'] = false);
-        document.getElementById('rightBtn').addEventListener('touchstart', () => keys['ArrowRight'] = true);
-        document.getElementById('rightBtn').addEventListener('touchend', () => keys['ArrowRight'] = false);
-        
-        // Movement update
-        function updateMovement() {
-            if (keys['ArrowUp'] || keys['w'] || keys['W']) {
-                myPlayer.y = Math.max(15, myPlayer.y - moveSpeed);
-            }
-            if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
-                myPlayer.x = Math.max(15, myPlayer.x - moveSpeed);
-            }
-            if (keys['ArrowDown'] || keys['s'] || keys['S']) {
-                myPlayer.y = Math.min(canvas.height - 15, myPlayer.y + moveSpeed);
-            }
-            if (keys['ArrowRight'] || keys['d'] || keys['D']) {
-                myPlayer.x = Math.min(canvas.width - 15, myPlayer.x + moveSpeed);
-            }
-        }
-        
-        // Movement loop
-        setInterval(updateMovement, 1000 / 60);
-        
-        // Generate initial coins
-        generateCoins();
-        
-        // Draw initial game state
-        drawGame();
-    </script>
+        noteText.value = '';
+        noteTitle.value = '';
+      } catch (err) {
+        alert('Error saving note: ' + err.message);
+      }
+    });
+
+    // Render notes
+    function renderNotes(items) {
+      if (!items.length) {
+        notesList.innerHTML = '<p class="muted">No notes yet. Add one!</p>';
+        return;
+      }
+      notesList.innerHTML = items.map(i => {
+        const time = i.createdAt && i.createdAt.toDate ? i.createdAt.toDate().toLocaleString() : '';
+        return `
+          <div class="note">
+            <div class="meta"><strong>${escapeHtml(i.title || '')}</strong> <span class="muted">${i.email ? 'by ' + escapeHtml(i.email) : ''} ${time ? ' • ' + escapeHtml(time) : ''}</span></div>
+            <div>${escapeHtml(i.text)}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Basic HTML escape
+    function escapeHtml(s){ if(!s) return ''; return s.replace(/[&<>\"']/g, c=>({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c])); }
+
+  </script>
 </body>
 </html>
