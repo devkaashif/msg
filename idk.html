@@ -1,228 +1,338 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Live Text Sharing — Firebase (Demo)</title>
-  <style>
-    :root{font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial;color:#111}
-    body{max-width:900px;margin:28px auto;padding:20px}
-    h1{font-size:20px;margin:0 0 6px}
-    p.lead{margin:0 0 18px;color:#444}
-    .card{border:1px solid #e6e6e6;border-radius:8px;padding:12px;margin-bottom:12px;background:#fff}
-    textarea{width:100%;min-height:120px;padding:8px;font-size:14px;border-radius:6px;border:1px solid #ddd}
-    input[type=text]{width:100%;padding:8px;border-radius:6px;border:1px solid #ddd}
-    .row{display:flex;gap:8px}
-    .btn{display:inline-block;padding:8px 12px;border-radius:6px;border:0;background:#0b74de;color:white;cursor:pointer}
-    .btn.ghost{background:#f3f3f3;color:#111}
-    .meta{font-size:12px;color:#666;margin-top:6px}
-    .note{white-space:pre-wrap}
-    .controls{display:flex;gap:6px;align-items:center}
-    .small{font-size:13px;color:#666}
-    .notes-wrap{margin-top:18px}
-    .note-item{padding:10px;border-radius:8px;border:1px solid #eee;margin-bottom:10px}
-    .muted{color:#777;font-size:12px}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Text Sharing System</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(to right, #4a00e0, #8e2de2);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+        
+        .status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .connected {
+            background-color: #28a745;
+        }
+        
+        .disconnected {
+            background-color: #dc3545;
+        }
+        
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+        
+        .input-section {
+            margin-bottom: 20px;
+        }
+        
+        textarea {
+            width: 100%;
+            height: 150px;
+            padding: 15px;
+            border: 2px solid #e1e5ee;
+            border-radius: 8px;
+            font-size: 1rem;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: #4a00e0;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .primary-btn {
+            background: linear-gradient(to right, #4a00e0, #8e2de2);
+            color: white;
+            flex: 2;
+        }
+        
+        .secondary-btn {
+            background-color: #f8f9fa;
+            color: #495057;
+            border: 1px solid #dee2e6;
+            flex: 1;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .output-section {
+            border: 1px solid #e1e5ee;
+            border-radius: 8px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            min-height: 200px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .message {
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            border-left: 4px solid #4a00e0;
+        }
+        
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+        
+        .message-content {
+            font-size: 1rem;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 15px;
+            background-color: #f8f9fa;
+            color: #6c757d;
+            font-size: 0.9rem;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                margin: 10px;
+            }
+            
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+        }
+    </style>
 </head>
 <body>
-  <h1>Live Text Sharing (Demo)</h1>
-  <p class="lead">Write text and share it. Other visitors will see updates instantly.</p>
-
-  <div class="card">
-    <label class="small">Your name (optional)</label>
-    <input id="displayName" type="text" placeholder="e.g. Alice" />
-    <label class="small" style="margin-top:8px;display:block">Message</label>
-    <textarea id="message" placeholder="Type something to share live..."></textarea>
-    <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
-      <button id="sendBtn" class="btn">Share</button>
-      <button id="clearBtn" class="btn ghost">Clear</button>
-      <div id="status" class="muted" style="margin-left:auto">Connecting...</div>
-    </div>
-  </div>
-
-  <div class="notes-wrap">
-    <h2 style="font-size:16px;margin-bottom:8px">Live Messages</h2>
-    <div id="notes" aria-live="polite"></div>
-  </div>
-
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-
-  <!--
-    IMPORTANT: I used your provided apiKey below and left placeholders for the other
-    Firebase config values. Replace the placeholders (the values that start with PLACEHOLDER_)
-    with the values from your Firebase project settings (in the Firebase console).
-
-    If you have a full firebaseConfig object already, you can paste it here and keep apiKey as provided.
-  -->
-  <script>
-    // ----- Firebase config (fill in your project values) -----
-    const firebaseConfig = {
-      apiKey: "AIzaSyD0T-mS__FlN3QASJnmD0K6S5VNDiN2bxQ",
-      authDomain: "PLACEHOLDER_YOUR_AUTH_DOMAIN.firebaseapp.com",
-      databaseURL: "https://PLACEHOLDER_YOUR_DATABASE_NAME-default-rtdb.firebaseio.com",
-      projectId: "PLACEHOLDER_PROJECT_ID",
-      storageBucket: "PLACEHOLDER_PROJECT_ID.appspot.com",
-      messagingSenderId: "PLACEHOLDER_MESSAGING_SENDER_ID",
-      appId: "PLACEHOLDER_APP_ID"
-    };
-
-    // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.database();
-
-    // DOM refs
-    const sendBtn = document.getElementById('sendBtn');
-    const clearBtn = document.getElementById('clearBtn');
-    const messageEl = document.getElementById('message');
-    const notesEl = document.getElementById('notes');
-    const statusEl = document.getElementById('status');
-    const nameEl = document.getElementById('displayName');
-
-    // Path in Realtime Database where notes will be stored
-    const NOTES_PATH = 'live_messages';
-
-    // Sign in anonymously so we have a uid for ownership checks
-    auth.signInAnonymously().catch(err => {
-      console.error('Auth error', err);
-      statusEl.textContent = 'Auth error: ' + err.message;
-    });
-
-    auth.onAuthStateChanged(user => {
-      if (user) {
-        statusEl.textContent = 'Connected as ' + (user.isAnonymous ? 'anonymous' : (user.displayName || user.email));
-        window.currentUid = user.uid;
-        startListening();
-      } else {
-        statusEl.textContent = 'Not signed in';
-      }
-    });
-
-    // Send message (create a new child under NOTES_PATH)
-    sendBtn.addEventListener('click', () => {
-      const text = messageEl.value && messageEl.value.trim();
-      if (!text) return alert('Please type a message first');
-
-      const payload = {
-        text,
-        name: nameEl.value ? nameEl.value.trim() : 'Anonymous',
-        uid: window.currentUid || null,
-        ts: Date.now()
-      };
-
-      // push() creates a unique key and writes data
-      db.ref(NOTES_PATH).push(payload)
-        .then(() => {
-          messageEl.value = '';
-        })
-        .catch(err => {
-          console.error('Write error', err);
-          alert('Failed to share: ' + err.message);
-        });
-    });
-
-    // Clear textarea
-    clearBtn.addEventListener('click', () => messageEl.value = '');
-
-    // Render helper
-    function renderNote(key, noteData) {
-      const existing = document.getElementById(key);
-      if (noteData === null) {
-        // removed
-        if (existing) existing.remove();
-        return;
-      }
-
-      const el = existing || document.createElement('div');
-      el.className = 'note-item';
-      el.id = key;
-
-      const time = new Date(noteData.ts || Date.now()).toLocaleString();
-
-      let controlsHtml = '';
-      if (noteData.uid && window.currentUid && noteData.uid === window.currentUid) {
-        controlsHtml = ` <button data-key="${key}" class="btn ghost" data-action="delete">Delete</button>`;
-      }
-
-      el.innerHTML = `
-        <div style="display:flex;justify-content:space-between;align-items:flex-start">
-          <div>
-            <div style="font-weight:600">${escapeHtml(noteData.name || 'Anonymous')}</div>
-            <div class="muted" style="margin-top:4px">${time}</div>
-          </div>
-          <div class="controls">${controlsHtml}</div>
+    <div class="container">
+        <header>
+            <h1>Live Text Sharing</h1>
+            <p class="subtitle">Share text in real-time with anyone</p>
+        </header>
+        
+        <div class="status">
+            <div class="status-dot disconnected" id="statusDot"></div>
+            <span id="statusText">Connecting to Firebase...</span>
         </div>
-        <div class="note" style="margin-top:8px">${escapeHtml(noteData.text)}</div>
-      `;
+        
+        <div class="main-content">
+            <div class="input-section">
+                <textarea id="textInput" placeholder="Type your text here..."></textarea>
+                <div class="button-group">
+                    <button class="primary-btn" id="shareBtn">Share Text</button>
+                    <button class="secondary-btn" id="clearBtn">Clear</button>
+                </div>
+            </div>
+            
+            <div class="output-section" id="outputSection">
+                <p id="emptyMessage">No shared text yet. Share something to get started!</p>
+            </div>
+        </div>
+        
+        <footer>
+            <p>Live Text Sharing System &copy; 2023 | Powered by Firebase</p>
+        </footer>
+    </div>
 
-      // attach listeners for delete
-      const delBtn = el.querySelector('[data-action="delete"]');
-      if (delBtn) {
-        delBtn.onclick = () => {
-          if (!confirm('Delete this message?')) return;
-          db.ref(`${NOTES_PATH}/${key}`).remove().catch(err => alert('Remove failed: ' + err.message));
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyD0T-mS__FlN3QASJnmD0K6S5VNDiN2bxQ",
+            authDomain: "live-text-sharing-system.firebaseapp.com",
+            databaseURL: "https://live-text-sharing-system-default-rtdb.firebaseio.com",
+            projectId: "live-text-sharing-system",
+            storageBucket: "live-text-sharing-system.appspot.com",
+            messagingSenderId: "123456789012",
+            appId: "1:123456789012:web:abcdef123456"
         };
-      }
 
-      if (!existing) notesEl.prepend(el); // newest on top
-    }
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
 
-    // Start listening for live updates
-    let listening = false;
-    function startListening() {
-      if (listening) return;
-      listening = true;
-      const ref = db.ref(NOTES_PATH);
+        // DOM elements
+        const textInput = document.getElementById('textInput');
+        const shareBtn = document.getElementById('shareBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const outputSection = document.getElementById('outputSection');
+        const emptyMessage = document.getElementById('emptyMessage');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
 
-      // initial set and child_added
-      ref.on('child_added', snapshot => renderNote(snapshot.key, snapshot.val()));
-      ref.on('child_changed', snapshot => renderNote(snapshot.key, snapshot.val()));
-      ref.on('child_removed', snapshot => renderNote(snapshot.key, null));
+        // Update connection status
+        firebase.database().ref('.info/connected').on('value', function(snapshot) {
+            if (snapshot.val() === true) {
+                statusDot.className = 'status-dot connected';
+                statusText.textContent = 'Connected to Firebase';
+            } else {
+                statusDot.className = 'status-dot disconnected';
+                statusText.textContent = 'Disconnected from Firebase';
+            }
+        });
 
-      // optional: connection state monitoring
-      const connectedRef = db.ref('.info/connected');
-      connectedRef.on('value', snap => {
-        const connected = snap.val();
-        statusEl.textContent = connected ? 'Online' : 'Offline';
-      });
-    }
+        // Share text function
+        shareBtn.addEventListener('click', function() {
+            const text = textInput.value.trim();
+            if (text) {
+                // Generate a unique ID for this message
+                const messageId = new Date().getTime();
+                
+                // Save to Firebase
+                database.ref('messages/' + messageId).set({
+                    text: text,
+                    timestamp: firebase.database.ServerValue.TIMESTAMP
+                });
+                
+                // Clear input
+                textInput.value = '';
+            } else {
+                alert('Please enter some text to share.');
+            }
+        });
 
-    // helper: escape HTML to avoid injection in demo
-    function escapeHtml(str){
-      if (str == null) return '';
-      return String(str)
-        .replace(/&/g,'&amp;')
-        .replace(/</g,'&lt;')
-        .replace(/>/g,'&gt;')
-        .replace(/"/g,'&quot;')
-        .replace(/'/g,'&#039;');
-    }
+        // Clear input
+        clearBtn.addEventListener('click', function() {
+            textInput.value = '';
+        });
 
-    // Optional: keep list small in UI by limiting number of items loaded
-    // (Could implement paging or history trimming on the server)
-  </script>
+        // Listen for new messages
+        database.ref('messages').on('child_added', function(snapshot) {
+            const message = snapshot.val();
+            displayMessage(message.text, message.timestamp);
+        });
 
-  <!--
-    Quick setup notes (put these in your Firebase console):
+        // Display message in the output section
+        function displayMessage(text, timestamp) {
+            // Hide empty message if it's visible
+            if (emptyMessage.style.display !== 'none') {
+                emptyMessage.style.display = 'none';
+            }
+            
+            // Create message element
+            const messageElement = document.createElement('div');
+            messageElement.className = 'message';
+            
+            // Format timestamp
+            const date = new Date(timestamp);
+            const timeString = date.toLocaleTimeString();
+            const dateString = date.toLocaleDateString();
+            
+            // Create message HTML
+            messageElement.innerHTML = `
+                <div class="message-header">
+                    <span>${dateString}</span>
+                    <span>${timeString}</span>
+                </div>
+                <div class="message-content">${text}</div>
+            `;
+            
+            // Add to output section
+            outputSection.appendChild(messageElement);
+            
+            // Scroll to bottom
+            outputSection.scrollTop = outputSection.scrollHeight;
+        }
 
-    1) Realtime Database: create a database and copy the databaseURL into firebaseConfig.databaseURL
-       e.g. https://your-db-name-default-rtdb.firebaseio.com
+        // Clear all messages (for demo purposes)
+        function clearAllMessages() {
+            database.ref('messages').remove();
+            outputSection.innerHTML = '<p id="emptyMessage">No shared text yet. Share something to get started!</p>';
+            emptyMessage = document.getElementById('emptyMessage');
+        }
 
-    2) Security rules for quick testing (NOT for production):
-
-       {
-         "rules": {
-           ".read": true,
-           ".write": true
-         }
-       }
-
-       For production, restrict write permissions or require authentication.
-
-    3) If you prefer Firestore instead of Realtime Database, let me know and I will give
-       a Firestore version of this single-file app.
-  -->
+        // Allow clearing all messages with Ctrl+Shift+C (for demo purposes)
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.shiftKey && e.key === 'C') {
+                if (confirm('Clear all messages? This cannot be undone.')) {
+                    clearAllMessages();
+                }
+            }
+        });
+    </script>
 </body>
 </html>
