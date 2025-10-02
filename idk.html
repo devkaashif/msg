@@ -1,303 +1,493 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Multiplayer Arena (HTML + Firebase)</title>
-  <style>
-    :root{--bg:#0f1724;--panel:#111827;--accent:#38bdf8;--muted:#94a3b8}
-    html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
-    body{background:linear-gradient(180deg,#071021 0%, #0b1220 100%);color:#e6eef8;display:flex;align-items:center;justify-content:center}
-    .app{width:980px;max-width:98vw;height:680px;max-height:96vh;background:rgba(255,255,255,0.03);border-radius:12px;padding:16px;box-sizing:border-box;display:grid;grid-template-columns:320px 1fr;gap:12px}
-    .panel{background:rgba(255,255,255,0.02);padding:12px;border-radius:10px;backdrop-filter:blur(6px)}
-    .left{display:flex;flex-direction:column;gap:10px}
-    label{font-size:13px;color:var(--muted)}
-    input[type=text]{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
-    button{padding:10px;border-radius:8px;border:0;background:var(--accent);color:#042028;font-weight:600;cursor:pointer}
-    #canvasWrap{position:relative;height:100%;border-radius:10px;overflow:hidden}
-    canvas{width:100%;height:100%;display:block;background:linear-gradient(180deg,#05202b 0%, #042034 100%)}
-    .playersList{max-height:200px;overflow:auto;padding:6px;border-radius:8px;background:rgba(255,255,255,0.01)}
-    .playerItem{padding:6px;border-radius:6px;margin-bottom:6px;background:rgba(0,0,0,0.12);display:flex;justify-content:space-between}
-    .controls{display:flex;gap:8px}
-    .hint{font-size:12px;color:var(--muted)}
-    .joystick{position:absolute;left:16px;bottom:16px;width:120px;height:120px;border-radius:50%;pointer-events:none}
-    .touchPad{position:absolute;right:16px;bottom:24px;width:120px;height:120px;border-radius:8px;pointer-events:none}
-    @media (max-width:800px){.app{grid-template-columns:1fr;grid-template-rows:auto 1fr;height:98vh}}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color Match - Multiplayer Game</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            margin-top: 20px;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .info-box {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px 15px;
+            border-radius: 10px;
+            margin: 5px;
+        }
+        
+        .game-area {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .color-card {
+            aspect-ratio: 1;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        .color-card:hover, .color-card:active {
+            transform: scale(1.05);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 50px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.3s, transform 0.2s;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        button:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+        }
+        
+        button:active {
+            transform: translateY(1px);
+        }
+        
+        .players-list {
+            margin-top: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+        }
+        
+        .player {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .player:last-child {
+            border-bottom: none;
+        }
+        
+        .player-name {
+            font-weight: bold;
+        }
+        
+        .player-score {
+            color: #4CAF50;
+        }
+        
+        .current-player {
+            background: rgba(76, 175, 80, 0.2);
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+        
+        .game-status {
+            text-align: center;
+            font-size: 1.2rem;
+            margin: 15px 0;
+            min-height: 30px;
+        }
+        
+        .instructions {
+            margin-top: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 600px) {
+            .game-area {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            button {
+                width: 80%;
+            }
+        }
+    </style>
 </head>
 <body>
-  <div class="app">
-    <div class="panel left">
-      <div>
-        <label>Player name</label>
-        <input id="nameInput" type="text" placeholder="Your name" />
-      </div>
-
-      <div>
-        <label>Room ID (shared with friends)</label>
-        <input id="roomInput" type="text" placeholder="room-123" />
-      </div>
-
-      <div class="controls">
-        <button id="joinBtn">Join Room</button>
-        <button id="leaveBtn" disabled>Leave</button>
-      </div>
-
-      <div style="margin-top:8px">
-        <label>Players in room</label>
-        <div class="playersList" id="playersList">(none)</div>
-      </div>
-
-      <div style="margin-top:8px">
-        <label>Game controls</label>
-        <div class="hint">Desktop: WASD / Arrow keys. Mobile: touch anywhere and drag to move.</div>
-      </div>
-
-      <div style="margin-top:auto">
-        <label>Notes</label>
-        <div class="hint">This demo uses Firebase Realtime Database. For testing set DB rules to true (not for production). Replace placeholders in the firebaseConfig below with your project's values. The provided apiKey has already been inserted.</div>
-      </div>
+    <h1>Color Match</h1>
+    
+    <div class="container">
+        <div class="game-info">
+            <div class="info-box">Score: <span id="score">0</span></div>
+            <div class="info-box">Time: <span id="timer">30</span>s</div>
+            <div class="info-box">Players: <span id="player-count">1</span></div>
+        </div>
+        
+        <div class="game-status" id="game-status">Waiting for players...</div>
+        
+        <div class="game-area" id="game-area">
+            <!-- Color cards will be generated here -->
+        </div>
+        
+        <div class="controls">
+            <button id="start-btn">Start Game</button>
+            <button id="join-btn">Join Game</button>
+        </div>
+        
+        <div class="players-list" id="players-list">
+            <h3>Players</h3>
+            <!-- Player list will be populated here -->
+        </div>
+        
+        <div class="instructions">
+            <h3>How to Play</h3>
+            <p>Match the color name with the actual color of the card. Tap/click the correct matches to earn points. The faster you match, the more points you get!</p>
+        </div>
     </div>
 
-    <div class="panel" id="canvasWrap">
-      <canvas id="gameCanvas"></canvas>
-      <div class="joystick" id="joystick" style="display:none"></div>
-    </div>
-  </div>
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyD0T-mS__FlN3QASJnmD0K6S5VNDiN2bxQ",
+            authDomain: "multiplayer-game-demo.firebaseapp.com",
+            databaseURL: "https://multiplayer-game-demo-default-rtdb.firebaseio.com",
+            projectId: "multiplayer-game-demo",
+            storageBucket: "multiplayer-game-demo.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef123456"
+        };
 
-  <!-- Firebase (compat) libraries -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
 
-  <script>
-  // ----------------------
-  // CONFIG: insert your project details
-  // ----------------------
-  const firebaseConfig = {
-    apiKey: "AIzaSyD0T-mS__FlN3QASJnmD0K6S5VNDiN2bxQ",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",         // replace
-    databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com", // replace
-    projectId: "YOUR_PROJECT",                         // replace
-    storageBucket: "YOUR_PROJECT.appspot.com",        // replace
-    messagingSenderId: "SENDER_ID",                  // replace
-    appId: "APP_ID"
-  };
+        // Game state
+        let gameState = {
+            players: {},
+            gameActive: false,
+            targetColor: '',
+            roundTime: 30,
+            currentRound: 0
+        };
 
-  // Initialize Firebase
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
+        // Player state
+        let playerId = null;
+        let playerName = null;
+        let playerScore = 0;
+        let gameTimer = null;
 
-  // Simple multiplayer: each client writes its player state to /rooms/{roomId}/players/{playerId}
+        // DOM elements
+        const gameArea = document.getElementById('game-area');
+        const playersList = document.getElementById('players-list');
+        const scoreElement = document.getElementById('score');
+        const timerElement = document.getElementById('timer');
+        const playerCountElement = document.getElementById('player-count');
+        const gameStatusElement = document.getElementById('game-status');
+        const startBtn = document.getElementById('start-btn');
+        const joinBtn = document.getElementById('join-btn');
 
-  // --- Local game state ---
-  const canvas = document.getElementById('gameCanvas');
-  const ctx = canvas.getContext('2d');
-  let W = canvas.width = canvas.clientWidth;
-  let H = canvas.height = canvas.clientHeight;
+        // Colors for the game
+        const colors = [
+            { name: 'Red', value: '#FF5252' },
+            { name: 'Blue', value: '#448AFF' },
+            { name: 'Green', value: '#69F0AE' },
+            { name: 'Yellow', value: '#FFD740' },
+            { name: 'Purple', value: '#E040FB' },
+            { name: 'Orange', value: '#FFAB40' }
+        ];
 
-  function resize() {
-    W = canvas.width = canvas.clientWidth;
-    H = canvas.height = canvas.clientHeight;
-  }
-  window.addEventListener('resize', resize);
+        // Initialize the game
+        function initGame() {
+            // Generate player ID
+            playerId = 'player_' + Math.random().toString(36).substr(2, 9);
+            playerName = prompt('Enter your name:') || 'Player ' + Math.floor(Math.random() * 1000);
+            
+            // Set up Firebase listeners
+            database.ref('gameState').on('value', snapshot => {
+                if (snapshot.exists()) {
+                    gameState = snapshot.val();
+                    updateGameUI();
+                }
+            });
+            
+            // Join the game
+            joinGame();
+            
+            // Set up event listeners
+            startBtn.addEventListener('click', startGame);
+            joinBtn.addEventListener('click', joinGame);
+        }
 
-  // Player controlled state
-  const local = {
-    id: null,
-    name: 'Player',
-    x: Math.random()*800 + 50,
-    y: Math.random()*400 + 50,
-    color: '#'+Math.floor(Math.random()*16777215).toString(16),
-    vx:0,vy:0,
-    speed: 160 // pixels per second
-  }
+        // Join the game
+        function joinGame() {
+            if (!playerId) return;
+            
+            const playerRef = database.ref('gameState/players/' + playerId);
+            playerRef.set({
+                name: playerName,
+                score: playerScore,
+                isReady: false
+            });
+            
+            updatePlayersList();
+        }
 
-  let roomId = null;
-  let players = {}; // other players states
+        // Start the game
+        function startGame() {
+            if (!gameState.gameActive) {
+                database.ref('gameState').update({
+                    gameActive: true,
+                    currentRound: 1
+                });
+                
+                startRound();
+            }
+        }
 
-  // DOM
-  const nameInput = document.getElementById('nameInput');
-  const roomInput = document.getElementById('roomInput');
-  const joinBtn = document.getElementById('joinBtn');
-  const leaveBtn = document.getElementById('leaveBtn');
-  const playersList = document.getElementById('playersList');
+        // Start a new round
+        function startRound() {
+            if (!gameState.gameActive) return;
+            
+            // Select a random target color
+            const targetIndex = Math.floor(Math.random() * colors.length);
+            const targetColor = colors[targetIndex];
+            
+            database.ref('gameState').update({
+                targetColor: targetColor.name,
+                roundStartTime: Date.now()
+            });
+            
+            // Generate color cards
+            generateColorCards(targetColor);
+            
+            // Start the timer
+            startTimer();
+        }
 
-  nameInput.value = 'Player'+Math.floor(Math.random()*9000);
+        // Generate the color cards for the current round
+        function generateColorCards(targetColor) {
+            gameArea.innerHTML = '';
+            
+            // Create an array of all possible cards
+            const cards = [];
+            
+            // Add the correct match
+            cards.push({
+                text: targetColor.name,
+                color: targetColor.value,
+                isCorrect: true
+            });
+            
+            // Add some incorrect matches
+            const otherColors = colors.filter(color => color.name !== targetColor.name);
+            for (let i = 0; i < 5; i++) {
+                const randomColor = otherColors[Math.floor(Math.random() * otherColors.length)];
+                cards.push({
+                    text: randomColor.name,
+                    color: targetColor.value,
+                    isCorrect: false
+                });
+            }
+            
+            // Shuffle the cards
+            shuffleArray(cards);
+            
+            // Create the card elements
+            cards.forEach(card => {
+                const cardElement = document.createElement('div');
+                cardElement.className = 'color-card';
+                cardElement.textContent = card.text;
+                cardElement.style.backgroundColor = card.color;
+                
+                cardElement.addEventListener('click', () => {
+                    handleCardClick(card.isCorrect);
+                });
+                
+                gameArea.appendChild(cardElement);
+            });
+        }
 
-  joinBtn.addEventListener('click', joinRoom);
-  leaveBtn.addEventListener('click', leaveRoom);
+        // Handle card click
+        function handleCardClick(isCorrect) {
+            if (!gameState.gameActive) return;
+            
+            if (isCorrect) {
+                // Calculate score based on time remaining
+                const timeElapsed = Date.now() - gameState.roundStartTime;
+                const timeRemaining = Math.max(0, gameState.roundTime * 1000 - timeElapsed);
+                const points = Math.floor(timeRemaining / 1000) + 10;
+                
+                playerScore += points;
+                scoreElement.textContent = playerScore;
+                
+                // Update player score in Firebase
+                database.ref('gameState/players/' + playerId).update({
+                    score: playerScore
+                });
+                
+                gameStatusElement.textContent = `Correct! +${points} points`;
+                
+                // Start next round after a short delay
+                setTimeout(() => {
+                    if (gameState.gameActive) {
+                        gameState.currentRound++;
+                        startRound();
+                    }
+                }, 1500);
+            } else {
+                gameStatusElement.textContent = 'Wrong! Try again.';
+                playerScore = Math.max(0, playerScore - 5);
+                scoreElement.textContent = playerScore;
+                
+                // Update player score in Firebase
+                database.ref('gameState/players/' + playerId).update({
+                    score: playerScore
+                });
+            }
+        }
 
-  function joinRoom(){
-    if(!roomInput.value) roomInput.value = 'room-1';
-    roomId = roomInput.value.trim();
-    local.name = nameInput.value || local.name;
-    local.id = 'p_'+Math.random().toString(36).slice(2,9);
+        // Start the round timer
+        function startTimer() {
+            let timeLeft = gameState.roundTime;
+            timerElement.textContent = timeLeft;
+            
+            if (gameTimer) clearInterval(gameTimer);
+            
+            gameTimer = setInterval(() => {
+                timeLeft--;
+                timerElement.textContent = timeLeft;
+                
+                if (timeLeft <= 0) {
+                    clearInterval(gameTimer);
+                    gameStatusElement.textContent = 'Time\'s up!';
+                    
+                    // Start next round after a short delay
+                    setTimeout(() => {
+                        if (gameState.gameActive) {
+                            gameState.currentRound++;
+                            startRound();
+                        }
+                    }, 2000);
+                }
+            }, 1000);
+        }
 
-    // write presence and state
-    const playerRef = db.ref(`rooms/${roomId}/players/${local.id}`);
-    playerRef.set({
-      name: local.name, x: local.x, y: local.y, color: local.color, ts: firebase.database.ServerValue.TIMESTAMP
-    });
-    // remove on disconnect
-    playerRef.onDisconnect().remove();
+        // Update the game UI based on the current state
+        function updateGameUI() {
+            // Update player count
+            const playerCount = Object.keys(gameState.players || {}).length;
+            playerCountElement.textContent = playerCount;
+            
+            // Update game status
+            if (!gameState.gameActive) {
+                gameStatusElement.textContent = 'Waiting for players...';
+                startBtn.disabled = false;
+            } else {
+                gameStatusElement.textContent = `Round ${gameState.currentRound}: Match ${gameState.targetColor}`;
+                startBtn.disabled = true;
+            }
+            
+            // Update players list
+            updatePlayersList();
+        }
 
-    // listen to players
-    db.ref(`rooms/${roomId}/players`).on('value', snapshot => {
-      const val = snapshot.val() || {};
-      players = val;
-      // ensure local player exists in local object
-      playersList.innerHTML = '';
-      for(const pid in players){
-        const p = players[pid];
-        const item = document.createElement('div');
-        item.className = 'playerItem';
-        item.innerHTML = `<div>${p.name||pid}</div><div style="opacity:0.8">${pid===local.id? 'you' : 'online'}</div>`;
-        playersList.appendChild(item);
-      }
-    });
+        // Update the players list
+        function updatePlayersList() {
+            playersList.innerHTML = '<h3>Players</h3>';
+            
+            if (!gameState.players) return;
+            
+            Object.entries(gameState.players).forEach(([id, player]) => {
+                const playerElement = document.createElement('div');
+                playerElement.className = 'player';
+                
+                if (id === playerId) {
+                    playerElement.classList.add('current-player');
+                }
+                
+                playerElement.innerHTML = `
+                    <span class="player-name">${player.name}</span>
+                    <span class="player-score">${player.score || 0}</span>
+                `;
+                
+                playersList.appendChild(playerElement);
+            });
+        }
 
-    joinBtn.disabled = true; leaveBtn.disabled = false;
-  }
+        // Utility function to shuffle an array
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
 
-  function leaveRoom(){
-    if(!roomId || !local.id) return;
-    db.ref(`rooms/${roomId}/players/${local.id}`).remove();
-    db.ref(`rooms/${roomId}/players`).off();
-    players = {};
-    playersList.innerHTML = '(none)';
-    joinBtn.disabled = false; leaveBtn.disabled = true;
-    roomId = null; local.id = null;
-  }
-
-  // Input handling (desktop + mobile)
-  const keys = {};
-  window.addEventListener('keydown', e=>{keys[e.key]=true});
-  window.addEventListener('keyup', e=>{keys[e.key]=false});
-
-  let touchStart = null;
-  function getTouchVector(e){
-    const t = e.touches ? e.touches[0] : e;
-    return {x: t.clientX - canvas.getBoundingClientRect().left, y: t.clientY - canvas.getBoundingClientRect().top};
-  }
-  canvas.addEventListener('touchstart', e=>{ e.preventDefault(); touchStart = getTouchVector(e);});
-  canvas.addEventListener('touchmove', e=>{ e.preventDefault(); const tv = getTouchVector(e); const dx = tv.x - touchStart.x; const dy = tv.y - touchStart.y; local.vx = dx; local.vy = dy; });
-  canvas.addEventListener('touchend', e=>{ touchStart = null; local.vx=0; local.vy=0; });
-
-  // Also allow mouse drag
-  let mouseDown = false; let mouseStart=null;
-  canvas.addEventListener('mousedown', e=>{ mouseDown=true; mouseStart = {x:e.offsetX,y:e.offsetY}; });
-  canvas.addEventListener('mousemove', e=>{ if(!mouseDown) return; const dx = e.offsetX - mouseStart.x; const dy = e.offsetY - mouseStart.y; local.vx = dx; local.vy = dy; });
-  window.addEventListener('mouseup', ()=>{ mouseDown=false; local.vx=0; local.vy=0; });
-
-  // Game loop
-  let last = performance.now();
-  function tick(now){
-    const dt = (now-last)/1000; last = now;
-    update(dt);
-    render();
-    requestAnimationFrame(tick);
-  }
-  requestAnimationFrame(tick);
-
-  function update(dt){
-    // keyboard
-    let mx=0,my=0;
-    if(keys['ArrowUp']||keys['w']||keys['W']) my -= 1;
-    if(keys['ArrowDown']||keys['s']||keys['S']) my += 1;
-    if(keys['ArrowLeft']||keys['a']||keys['A']) mx -= 1;
-    if(keys['ArrowRight']||keys['d']||keys['D']) mx += 1;
-
-    // normalize
-    if(mx!==0 || my!==0){
-      const len = Math.hypot(mx,my)||1; mx/=len; my/=len;
-      local.x += mx*local.speed*dt;
-      local.y += my*local.speed*dt;
-    }
-
-    // touch/mouse velocity style control
-    if(local.vx || local.vy){
-      const len = Math.hypot(local.vx, local.vy) || 1;
-      const nx = local.vx/len, ny = local.vy/len;
-      local.x += nx * Math.min(300, len) * dt;
-      local.y += ny * Math.min(300, len) * dt;
-    }
-
-    // clamp to canvas
-    local.x = Math.max(16, Math.min(W-16, local.x));
-    local.y = Math.max(16, Math.min(H-16, local.y));
-
-    // write to firebase (throttle)
-    const nowMs = Date.now();
-    if(roomId && local.id){
-      // small throttle: write every 100ms
-      if(!local._lastSync || nowMs - local._lastSync > 100){
-        local._lastSync = nowMs;
-        db.ref(`rooms/${roomId}/players/${local.id}`).update({ x: local.x, y: local.y, color: local.color, name: local.name, ts: firebase.database.ServerValue.TIMESTAMP});
-      }
-    }
-  }
-
-  function render(){
-    ctx.clearRect(0,0,W,H);
-
-    // background grid
-    ctx.save();
-    ctx.globalAlpha = 0.08;
-    ctx.beginPath();
-    for(let gx=0;gx<W;gx+=40){ ctx.moveTo(gx,0); ctx.lineTo(gx,H); }
-    for(let gy=0;gy<H;gy+=40){ ctx.moveTo(0,gy); ctx.lineTo(W,gy); }
-    ctx.strokeStyle = '#fff'; ctx.stroke();
-    ctx.restore();
-
-    // draw players
-    // players object contains all player states; make sure to draw local player last
-    for(const pid in players){
-      if(pid===local.id) continue;
-      const p = players[pid];
-      if(!p) continue;
-      drawPlayer(p.x||0,p.y||0,p.color||'#888',p.name||pid,false);
-    }
-    // draw local player
-    drawPlayer(local.x, local.y, local.color, local.name, true);
-  }
-
-  function drawPlayer(x,y,color,name,isLocal){
-    ctx.save();
-    ctx.beginPath();
-    ctx.fillStyle = color || '#8bd';
-    ctx.strokeStyle = '#00000033';
-    ctx.lineWidth = 2;
-    ctx.arc(x,y,16,0,Math.PI*2);
-    ctx.fill();
-    ctx.stroke();
-    ctx.closePath();
-
-    // name tag
-    ctx.font = '13px system-ui,Arial';
-    ctx.fillStyle = '#e6eef8';
-    ctx.textAlign = 'center';
-    ctx.fillText(name, x, y-22);
-
-    if(isLocal){
-      // small indicator
-      ctx.beginPath(); ctx.arc(x+10,y-10,6,0,Math.PI*2); ctx.fillStyle = '#ffffff33'; ctx.fill();
-    }
-    ctx.restore();
-  }
-
-  // initial canvas sizing
-  setTimeout(resize,50);
-
-  // quick helper: enable DB rules for testing
-  // In your Firebase console: Realtime Database -> Rules -> set to:
-  // {
-  //   "rules": {
-  //     ".read": true,
-  //     ".write": true
-  //   }
-  // }
-
-  // That's it. Share the room ID with friends. Each client who joins the same room will see each other's dots in near-real-time.
-  </script>
+        // Initialize the game when the page loads
+        window.addEventListener('load', initGame);
+    </script>
 </body>
 </html>
