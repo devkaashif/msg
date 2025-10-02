@@ -1,493 +1,161 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Color Match - Multiplayer Game</title>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        body {
-            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
-            color: white;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
-        }
-        
-        .container {
-            max-width: 800px;
-            width: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            border-radius: 15px;
-            padding: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            margin-top: 20px;
-        }
-        
-        h1 {
-            text-align: center;
-            margin-bottom: 20px;
-            font-size: 2.5rem;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-        }
-        
-        .game-info {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-        
-        .info-box {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 10px 15px;
-            border-radius: 10px;
-            margin: 5px;
-        }
-        
-        .game-area {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        
-        .color-card {
-            aspect-ratio: 1;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 1.2rem;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-        }
-        
-        .color-card:hover, .color-card:active {
-            transform: scale(1.05);
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
-        }
-        
-        .controls {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-top: 20px;
-        }
-        
-        button {
-            background: #4CAF50;
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            border-radius: 50px;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: background 0.3s, transform 0.2s;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-        }
-        
-        button:hover {
-            background: #45a049;
-            transform: translateY(-2px);
-        }
-        
-        button:active {
-            transform: translateY(1px);
-        }
-        
-        .players-list {
-            margin-top: 20px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            padding: 15px;
-        }
-        
-        .player {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        
-        .player:last-child {
-            border-bottom: none;
-        }
-        
-        .player-name {
-            font-weight: bold;
-        }
-        
-        .player-score {
-            color: #4CAF50;
-        }
-        
-        .current-player {
-            background: rgba(76, 175, 80, 0.2);
-            padding: 5px 10px;
-            border-radius: 5px;
-        }
-        
-        .game-status {
-            text-align: center;
-            font-size: 1.2rem;
-            margin: 15px 0;
-            min-height: 30px;
-        }
-        
-        .instructions {
-            margin-top: 20px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            padding: 15px;
-            font-size: 0.9rem;
-        }
-        
-        @media (max-width: 600px) {
-            .game-area {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            
-            h1 {
-                font-size: 2rem;
-            }
-            
-            .controls {
-                flex-direction: column;
-                align-items: center;
-            }
-            
-            button {
-                width: 80%;
-            }
-        }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Simple Firebase Chat</title>
+  <style>
+    :root{--bg:#f5f7fb;--card:#fff;--accent:#4f46e5;--muted:#6b7280}
+    body{font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial; background:var(--bg); margin:0;display:flex;align-items:center;justify-content:center;height:100vh}
+    .app{width:420px;background:var(--card);border-radius:12px;box-shadow:0 6px 24px rgba(16,24,40,0.08);overflow:hidden}
+    header{padding:16px 20px;border-bottom:1px solid #eef2ff;display:flex;align-items:center;gap:12px}
+    header h1{font-size:16px;margin:0}
+    main{padding:12px;height:420px;display:flex;flex-direction:column}
+    .messages{flex:1;overflow:auto;padding:8px;display:flex;flex-direction:column;gap:8px}
+    .msg{max-width:80%;padding:10px 12px;border-radius:10px;background:#f3f4f6;align-self:flex-start}
+    .msg.me{background:linear-gradient(90deg,#eef2ff,#e0e7ff);align-self:flex-end}
+    .meta{font-size:12px;color:var(--muted);margin-bottom:6px}
+    .composer{display:flex;gap:8px;padding:12px;border-top:1px solid #f3f4f6}
+    input[type="text"]{flex:1;padding:10px;border-radius:8px;border:1px solid #e6e9f2;outline:none}
+    button{background:var(--accent);color:#fff;border:0;padding:10px 12px;border-radius:8px;cursor:pointer}
+    .small{font-size:12px;color:var(--muted);padding:8px 12px}
+    .top-controls{display:flex;gap:8px;align-items:center;margin-left:auto}
+    .name-input{width:140px;padding:6px;border-radius:8px;border:1px solid #e6e9f2}
+    .status{font-size:12px;color:var(--muted);padding:8px}
+  </style>
 </head>
 <body>
-    <h1>Color Match</h1>
-    
-    <div class="container">
-        <div class="game-info">
-            <div class="info-box">Score: <span id="score">0</span></div>
-            <div class="info-box">Time: <span id="timer">30</span>s</div>
-            <div class="info-box">Players: <span id="player-count">1</span></div>
-        </div>
-        
-        <div class="game-status" id="game-status">Waiting for players...</div>
-        
-        <div class="game-area" id="game-area">
-            <!-- Color cards will be generated here -->
-        </div>
-        
-        <div class="controls">
-            <button id="start-btn">Start Game</button>
-            <button id="join-btn">Join Game</button>
-        </div>
-        
-        <div class="players-list" id="players-list">
-            <h3>Players</h3>
-            <!-- Player list will be populated here -->
-        </div>
-        
-        <div class="instructions">
-            <h3>How to Play</h3>
-            <p>Match the color name with the actual color of the card. Tap/click the correct matches to earn points. The faster you match, the more points you get!</p>
-        </div>
-    </div>
+  <div class="app">
+    <header>
+      <div style="width:36px;height:36px;background:linear-gradient(45deg,#c7d2fe,#60a5fa);border-radius:8px"></div>
+      <h1>Firebase Chat</h1>
+      <div class="top-controls">
+        <input class="name-input" id="displayName" placeholder="Your name (optional)" />
+        <div id="authStatus" class="small">Connecting...</div>
+      </div>
+    </header>
 
-    <script>
-        // Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyD0T-mS__FlN3QASJnmD0K6S5VNDiN2bxQ",
-            authDomain: "multiplayer-game-demo.firebaseapp.com",
-            databaseURL: "https://multiplayer-game-demo-default-rtdb.firebaseio.com",
-            projectId: "multiplayer-game-demo",
-            storageBucket: "multiplayer-game-demo.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:123456789:web:abcdef123456"
-        };
+    <main>
+      <div id="messages" class="messages"></div>
+      <div class="composer">
+        <input id="messageInput" type="text" placeholder="Type a message and press Enter" />
+        <button id="sendBtn">Send</button>
+      </div>
+      <div class="small" style="text-align:center">This demo uses Firebase Realtime Database. Replace the firebaseConfig placeholders with your project values.</div>
+    </main>
+  </div>
 
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
+  <!-- Firebase (compat) SDKs from CDN -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
 
-        // Game state
-        let gameState = {
-            players: {},
-            gameActive: false,
-            targetColor: '',
-            roundTime: 30,
-            currentRound: 0
-        };
+  <script>
+    // ---------------------------
+    // Configuration - edit these
+    // ---------------------------
+    // The user provided apiKey has been inserted below. To run this app you should replace
+    // the placeholders (authDomain, databaseURL, projectId, etc.) with the values from your
+    // Firebase project settings. If you only have an apiKey for now, create a Firebase project
+    // and copy the full config from the project settings.
+    const firebaseConfig = {
+      apiKey: "AIzaSyD0T-mS__FlN3QASJnmD0K6S5VNDiN2bxQ",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+      projectId: "YOUR_PROJECT",
+      storageBucket: "YOUR_PROJECT.appspot.com",
+      messagingSenderId: "SENDER_ID",
+      appId: "APP_ID"
+    };
 
-        // Player state
-        let playerId = null;
-        let playerName = null;
-        let playerScore = 0;
-        let gameTimer = null;
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const auth = firebase.auth();
 
-        // DOM elements
-        const gameArea = document.getElementById('game-area');
-        const playersList = document.getElementById('players-list');
-        const scoreElement = document.getElementById('score');
-        const timerElement = document.getElementById('timer');
-        const playerCountElement = document.getElementById('player-count');
-        const gameStatusElement = document.getElementById('game-status');
-        const startBtn = document.getElementById('start-btn');
-        const joinBtn = document.getElementById('join-btn');
+    // UI elements
+    const messagesEl = document.getElementById('messages');
+    const inputEl = document.getElementById('messageInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const nameInput = document.getElementById('displayName');
+    const authStatus = document.getElementById('authStatus');
 
-        // Colors for the game
-        const colors = [
-            { name: 'Red', value: '#FF5252' },
-            { name: 'Blue', value: '#448AFF' },
-            { name: 'Green', value: '#69F0AE' },
-            { name: 'Yellow', value: '#FFD740' },
-            { name: 'Purple', value: '#E040FB' },
-            { name: 'Orange', value: '#FFAB40' }
-        ];
+    // Reader that ensures newest messages show at bottom
+    function scrollToBottom(){ messagesEl.scrollTop = messagesEl.scrollHeight; }
 
-        // Initialize the game
-        function initGame() {
-            // Generate player ID
-            playerId = 'player_' + Math.random().toString(36).substr(2, 9);
-            playerName = prompt('Enter your name:') || 'Player ' + Math.floor(Math.random() * 1000);
-            
-            // Set up Firebase listeners
-            database.ref('gameState').on('value', snapshot => {
-                if (snapshot.exists()) {
-                    gameState = snapshot.val();
-                    updateGameUI();
-                }
-            });
-            
-            // Join the game
-            joinGame();
-            
-            // Set up event listeners
-            startBtn.addEventListener('click', startGame);
-            joinBtn.addEventListener('click', joinGame);
-        }
+    // Simple message renderer
+    function renderMessage(data){
+      const msg = data.val();
+      const el = document.createElement('div');
+      el.className = 'msg' + (msg.uid === currentUid ? ' me' : '');
 
-        // Join the game
-        function joinGame() {
-            if (!playerId) return;
-            
-            const playerRef = database.ref('gameState/players/' + playerId);
-            playerRef.set({
-                name: playerName,
-                score: playerScore,
-                isReady: false
-            });
-            
-            updatePlayersList();
-        }
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+      const when = new Date(msg.ts || Date.now());
+      meta.textContent = `${msg.name || 'Anonymous'} • ${when.toLocaleTimeString()}`;
 
-        // Start the game
-        function startGame() {
-            if (!gameState.gameActive) {
-                database.ref('gameState').update({
-                    gameActive: true,
-                    currentRound: 1
-                });
-                
-                startRound();
-            }
-        }
+      const body = document.createElement('div');
+      body.textContent = msg.text || '';
 
-        // Start a new round
-        function startRound() {
-            if (!gameState.gameActive) return;
-            
-            // Select a random target color
-            const targetIndex = Math.floor(Math.random() * colors.length);
-            const targetColor = colors[targetIndex];
-            
-            database.ref('gameState').update({
-                targetColor: targetColor.name,
-                roundStartTime: Date.now()
-            });
-            
-            // Generate color cards
-            generateColorCards(targetColor);
-            
-            // Start the timer
-            startTimer();
-        }
+      el.appendChild(meta);
+      el.appendChild(body);
+      messagesEl.appendChild(el);
+      scrollToBottom();
+    }
 
-        // Generate the color cards for the current round
-        function generateColorCards(targetColor) {
-            gameArea.innerHTML = '';
-            
-            // Create an array of all possible cards
-            const cards = [];
-            
-            // Add the correct match
-            cards.push({
-                text: targetColor.name,
-                color: targetColor.value,
-                isCorrect: true
-            });
-            
-            // Add some incorrect matches
-            const otherColors = colors.filter(color => color.name !== targetColor.name);
-            for (let i = 0; i < 5; i++) {
-                const randomColor = otherColors[Math.floor(Math.random() * otherColors.length)];
-                cards.push({
-                    text: randomColor.name,
-                    color: targetColor.value,
-                    isCorrect: false
-                });
-            }
-            
-            // Shuffle the cards
-            shuffleArray(cards);
-            
-            // Create the card elements
-            cards.forEach(card => {
-                const cardElement = document.createElement('div');
-                cardElement.className = 'color-card';
-                cardElement.textContent = card.text;
-                cardElement.style.backgroundColor = card.color;
-                
-                cardElement.addEventListener('click', () => {
-                    handleCardClick(card.isCorrect);
-                });
-                
-                gameArea.appendChild(cardElement);
-            });
-        }
+    // Authentication: anonymous sign-in
+    let currentUid = null;
+    auth.signInAnonymously().catch(err => console.error(err));
 
-        // Handle card click
-        function handleCardClick(isCorrect) {
-            if (!gameState.gameActive) return;
-            
-            if (isCorrect) {
-                // Calculate score based on time remaining
-                const timeElapsed = Date.now() - gameState.roundStartTime;
-                const timeRemaining = Math.max(0, gameState.roundTime * 1000 - timeElapsed);
-                const points = Math.floor(timeRemaining / 1000) + 10;
-                
-                playerScore += points;
-                scoreElement.textContent = playerScore;
-                
-                // Update player score in Firebase
-                database.ref('gameState/players/' + playerId).update({
-                    score: playerScore
-                });
-                
-                gameStatusElement.textContent = `Correct! +${points} points`;
-                
-                // Start next round after a short delay
-                setTimeout(() => {
-                    if (gameState.gameActive) {
-                        gameState.currentRound++;
-                        startRound();
-                    }
-                }, 1500);
-            } else {
-                gameStatusElement.textContent = 'Wrong! Try again.';
-                playerScore = Math.max(0, playerScore - 5);
-                scoreElement.textContent = playerScore;
-                
-                // Update player score in Firebase
-                database.ref('gameState/players/' + playerId).update({
-                    score: playerScore
-                });
-            }
-        }
+    auth.onAuthStateChanged(user => {
+      if(user){
+        currentUid = user.uid;
+        authStatus.textContent = 'Connected (anonymous)';
+        startListening();
+      } else {
+        authStatus.textContent = 'Not signed in';
+      }
+    });
 
-        // Start the round timer
-        function startTimer() {
-            let timeLeft = gameState.roundTime;
-            timerElement.textContent = timeLeft;
-            
-            if (gameTimer) clearInterval(gameTimer);
-            
-            gameTimer = setInterval(() => {
-                timeLeft--;
-                timerElement.textContent = timeLeft;
-                
-                if (timeLeft <= 0) {
-                    clearInterval(gameTimer);
-                    gameStatusElement.textContent = 'Time\'s up!';
-                    
-                    // Start next round after a short delay
-                    setTimeout(() => {
-                        if (gameState.gameActive) {
-                            gameState.currentRound++;
-                            startRound();
-                        }
-                    }, 2000);
-                }
-            }, 1000);
-        }
+    // Listen for new messages
+    let messagesRef = db.ref('messages');
+    function startListening(){
+      messagesRef.limitToLast(200).on('child_added', snap => renderMessage(snap));
+    }
 
-        // Update the game UI based on the current state
-        function updateGameUI() {
-            // Update player count
-            const playerCount = Object.keys(gameState.players || {}).length;
-            playerCountElement.textContent = playerCount;
-            
-            // Update game status
-            if (!gameState.gameActive) {
-                gameStatusElement.textContent = 'Waiting for players...';
-                startBtn.disabled = false;
-            } else {
-                gameStatusElement.textContent = `Round ${gameState.currentRound}: Match ${gameState.targetColor}`;
-                startBtn.disabled = true;
-            }
-            
-            // Update players list
-            updatePlayersList();
-        }
+    // Send a message
+    function sendMessage(){
+      const text = inputEl.value.trim();
+      if(!text) return;
 
-        // Update the players list
-        function updatePlayersList() {
-            playersList.innerHTML = '<h3>Players</h3>';
-            
-            if (!gameState.players) return;
-            
-            Object.entries(gameState.players).forEach(([id, player]) => {
-                const playerElement = document.createElement('div');
-                playerElement.className = 'player';
-                
-                if (id === playerId) {
-                    playerElement.classList.add('current-player');
-                }
-                
-                playerElement.innerHTML = `
-                    <span class="player-name">${player.name}</span>
-                    <span class="player-score">${player.score || 0}</span>
-                `;
-                
-                playersList.appendChild(playerElement);
-            });
-        }
+      const name = (nameInput.value || 'Anonymous').trim();
+      const msg = {
+        uid: currentUid,
+        name: name || 'Anonymous',
+        text: text,
+        ts: Date.now()
+      };
 
-        // Utility function to shuffle an array
-        function shuffleArray(array) {
-            for (let i = array.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [array[i], array[j]] = [array[j], array[i]];
-            }
-            return array;
-        }
+      // push to realtime db
+      messagesRef.push(msg).then(()=>{
+        inputEl.value = '';
+        inputEl.focus();
+      }).catch(err=>{
+        console.error('Send failed', err);
+        alert('Failed to send message. Check console for details.');
+      });
+    }
 
-        // Initialize the game when the page loads
-        window.addEventListener('load', initGame);
-    </script>
+    sendBtn.addEventListener('click', sendMessage);
+    inputEl.addEventListener('keydown', e=>{ if(e.key === 'Enter') sendMessage(); });
+
+    // Persist display name locally
+    nameInput.addEventListener('change', ()=> localStorage.setItem('chat_name', nameInput.value));
+    (function(){ const stored = localStorage.getItem('chat_name'); if(stored) nameInput.value = stored; })();
+
+    // Simple cleanup button (uncomment if you want to wipe messages from console)
+    // function wipe(){ messagesRef.remove(); }
+  </script>
 </body>
 </html>
+
