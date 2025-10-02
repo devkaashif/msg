@@ -3,302 +3,278 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Multiplayer Arena (Firestore)</title>
+  <title>Territory Painter — Multiplayer (Firebase)</title>
   <style>
-    html,body { height:100%; margin:0; font-family:system-ui,Segoe UI,Roboto,Arial; background:#111; color:#eaeaea; display:flex; flex-direction:column; align-items:center; }
-    #topbar { width:100%; max-width:980px; display:flex; justify-content:space-between; align-items:center; padding:12px; box-sizing:border-box; }
-    #status { font-size:14px; opacity:0.9; }
-    #canvasWrap { width:100%; max-width:980px; background:#0d0d0d; border-radius:8px; padding:10px; box-sizing:border-box; }
-    canvas { display:block; width:100%; height:600px; background:linear-gradient(#0b1220,#091018); border-radius:6px; }
-    #controls { margin-top:8px; display:flex; gap:8px; align-items:center; }
-    button { padding:8px 12px; border-radius:6px; border:none; cursor:pointer; background:#1f6feb; color:#fff; }
-    input,select { padding:8px; border-radius:6px; border:1px solid #333; background:#0f1724; color:#fff; }
-    small { color:#bbb; }
+    :root{--bg:#0f1724;--grid:#111827;--ui:#e6edf3}
+    html,body{height:100%;margin:0;background:var(--bg);color:var(--ui);font-family:Inter,system-ui,Arial}
+    .wrap{display:flex;gap:16px;padding:18px}
+    canvas{background:linear-gradient(180deg,#07102633,#00000066);border-radius:8px}
+    .panel{width:320px}
+    h1{margin:0 0 8px;font-size:18px}
+    label{display:block;margin-top:8px;font-size:13px;color:#9fb0c6}
+    input,button{width:100%;padding:8px;margin-top:6px;border-radius:6px;border:0}
+    input{background:#0b1220;color:var(--ui)}
+    button{background:#0ea5a4;color:#001;cursor:pointer}
+    .info{margin-top:10px;font-size:13px;color:#9fb0c6}
+    .players{margin-top:10px}
+    .player-item{display:flex;align-items:center;gap:8px;margin:6px 0}
+    .swatch{width:18px;height:18px;border-radius:4px}
   </style>
 </head>
 <body>
-  <div id="topbar">
-    <div>
-      <strong>Multiplayer Arena</strong>
-      <div id="status"><small>Connecting to Firebase...</small></div>
-    </div>
-    <div id="controls">
-      <input id="nameInput" placeholder="name (optional)" />
-      <select id="speedSelect" title="Movement speed">
-        <option value="2">Slow</option>
-        <option value="3" selected>Normal</option>
-        <option value="5">Fast</option>
-      </select>
-      <button id="respawnBtn">Respawn</button>
+  <div class="wrap">
+    <canvas id="game" width="800" height="520"></canvas>
+    <div class="panel">
+      <h1>Territory Painter — Multiplayer</h1>
+      <div>
+        <label>Display name</label>
+        <input id="name" placeholder="Your name" />
+        <label>Color (hex)</label>
+        <input id="color" placeholder="#ff6b6b" />
+        <button id="join">Join Game</button>
+        <div class="info">Move with arrow keys or WASD. Move over tiles to claim them. Cover the grid to score.</div>
+      </div>
+
+      <div class="players">
+        <h3 style="margin-top:14px">Players</h3>
+        <div id="playersList"></div>
+        <div style="margin-top:10px" id="scoreInfo"></div>
+      </div>
     </div>
   </div>
 
-  <div id="canvasWrap">
-    <canvas id="arena" width="980" height="600"></canvas>
-  </div>
+  <!-- Firebase compat SDKs (using compat for simpler migration) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 
-  <script type="module">
-    // -----------------------
-    // Your Firebase config
-    // -----------------------
-    const firebaseConfig = {
-      apiKey: "AIzaSyD0T-mS__FlN3QASJnmD0K6S5VNDiN2bxQ",
-      authDomain: "poplol-7209f.firebaseapp.com",
-      projectId: "poplol-7209f",
-      storageBucket: "poplol-7209f.firebasestorage.app",
-      messagingSenderId: "1058108342269",
-      appId: "1:1058108342269:web:577700a7503b3db8316394",
-      measurementId: "G-EXR6CPBH5R"
-    };
+  <script>
+  // ---------- Replace with provided config (already inserted) ----------
+  const firebaseConfig = {
+    apiKey: "AIzaSyDrHe4VwIFCyUI4u8-WwbcncSppJqf7AW4",
+    authDomain: "new-1-15bbf.firebaseapp.com",
+    projectId: "new-1-15bbf",
+    storageBucket: "new-1-15bbf.firebasestorage.app",
+    messagingSenderId: "25831911925",
+    appId: "1:25831911925:web:bf664020e248a5f239f0bc",
+    measurementId: "G-KY3MJVJ0EM"
+  };
+  // --------------------------------------------------------------------
 
-    // -----------------------
-    // Firebase SDK (modular)
-    // -----------------------
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-    import {
-      getFirestore, doc, setDoc, deleteDoc, onSnapshot,
-      collection, serverTimestamp, updateDoc, getDoc
-    } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+  // Game settings
+  const COLS = 20; // width in tiles
+  const ROWS = 13; // height in tiles
+  const TILE = 32; // pixels
 
-    // -----------------------
-    // Local player setup
-    // -----------------------
-    const canvas = document.getElementById('arena');
-    const ctx = canvas.getContext('2d');
-    const statusEl = document.getElementById('status');
-    const nameInput = document.getElementById('nameInput');
-    const speedSelect = document.getElementById('speedSelect');
-    const respawnBtn = document.getElementById('respawnBtn');
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
 
-    // Keep player id persistent within the browser session
-    let playerId = localStorage.getItem('playerId') || null;
-    if (!playerId) {
-      playerId = 'p_' + Math.random().toString(36).slice(2,10);
-      localStorage.setItem('playerId', playerId);
+  // Resize canvas to grid size (plus padding)
+  canvas.width = COLS * TILE + 2;
+  canvas.height = ROWS * TILE + 2;
+
+  // Local client state
+  let client = {
+    id: null,
+    name: '',
+    color: '#ff6b6b',
+    x: 0,
+    y: 0
+  };
+
+  // Firestore references
+  const playersRef = db.collection('players');
+  const tilesDoc = db.collection('game').doc('tiles');
+
+  // UI elements
+  const nameInput = document.getElementById('name');
+  const colorInput = document.getElementById('color');
+  const joinBtn = document.getElementById('join');
+  const playersList = document.getElementById('playersList');
+  const scoreInfo = document.getElementById('scoreInfo');
+
+  // Local copy of world state
+  let players = {};
+  let tiles = {}; // map of "x_y" -> {ownerId, color}
+
+  // Utility
+  function randId(len=8){return Math.random().toString(36).slice(2,2+len)}
+  function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+
+  // Initialize tiles document if missing (small grid => ok)
+  async function ensureTilesDoc(){
+    const snap = await tilesDoc.get();
+    if(!snap.exists){
+      const map = {};
+      for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++)map[`${x}_${y}`] = null;
+      await tilesDoc.set({map});
     }
+  }
 
-    // Player state
-    const local = {
-      id: playerId,
-      name: nameInput.value || ('Player_' + playerId.slice(-4)),
-      color: '#' + Math.floor(Math.random()*0xFFFFFF).toString(16).padStart(6,'0'),
-      x: Math.random()*(canvas.width - 60) + 30,
-      y: Math.random()*(canvas.height - 60) + 30,
-      size: 14,
-      vx: 0, vy: 0,
-      lastUpdate: Date.now()
-    };
+  // Join the game
+  joinBtn.addEventListener('click', async ()=>{
+    client.name = (nameInput.value || 'Player_'+randId(3)).slice(0,18);
+    client.color = (colorInput.value || '#'+Math.floor(Math.random()*16777215).toString(16)).slice(0,7);
+    client.id = 'p_'+randId(6);
+    client.x = Math.floor(Math.random()*COLS);
+    client.y = Math.floor(Math.random()*ROWS);
 
-    // Active players from Firestore
-    const players = new Map();
+    await ensureTilesDoc();
 
-    // Movement
-    const keys = {};
-    window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
-    window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
-
-    // UI events
-    nameInput.addEventListener('change', () => {
-      local.name = nameInput.value.trim() || local.name;
-      writePlayer(true);
-    });
-    respawnBtn.addEventListener('click', () => {
-      local.x = Math.random()*(canvas.width - 60) + 30;
-      local.y = Math.random()*(canvas.height - 60) + 30;
-      writePlayer(true);
-    });
-
-    // -----------------------
-    // Firestore helpers
-    // -----------------------
-    const playersCol = collection(db, 'players');
-
-    // Write player document. Use setDoc for idempotent writes.
-    let lastWrite = 0;
-    async function writePlayer(force=false) {
-      const now = Date.now();
-      // throttle writes to ~10 per second
-      if (!force && now - lastWrite < 100) return;
-      lastWrite = now;
-      try {
-        const pdoc = doc(db, 'players', local.id);
-        await setDoc(pdoc, {
-          id: local.id,
-          name: local.name,
-          color: local.color,
-          x: local.x,
-          y: local.y,
-          size: local.size,
-          lastSeen: serverTimestamp()
-        }, { merge: true });
-      } catch (err) {
-        console.error('writePlayer error', err);
-      }
-    }
-
-    // Remove player doc on unload
-    window.addEventListener('beforeunload', () => {
-      try {
-        // best-effort synchronous delete; Firestore delete is async so we call without await
-        deleteDoc(doc(db, 'players', local.id));
-      } catch (e) {
-        // ignore
-      }
+    // create player doc (no auth) with TTL-style heartbeat
+    await playersRef.doc(client.id).set({
+      name: client.name,
+      color: client.color,
+      x: client.x,
+      y: client.y,
+      ts: firebase.firestore.FieldValue.serverTimestamp()
     });
 
-    // Clean-up routine: periodically remove stale players locally (others may still exist server-side)
-    function cleanupStalePlayers() {
-      const cutoff = Date.now() - 30_000; // 30s
-      for (const [id, p] of players.entries()) {
-        if (p._lastSeenRaw && p._lastSeenRaw < cutoff) players.delete(id);
-      }
-    }
+    // Claim starting tile
+    claimTile(client.x, client.y);
 
-    // -----------------------
-    // Real-time subscription
-    // -----------------------
-    onSnapshot(playersCol, snapshot => {
-      snapshot.docChanges().forEach(change => {
-        const d = change.doc.data();
-        const id = d.id;
-        // store a raw timestamp number for stale detection
-        const lastSeenRaw = d.lastSeen && d.lastSeen.toMillis ? d.lastSeen.toMillis() : Date.now();
-        if (change.type === 'removed') {
-          players.delete(id);
-        } else {
-          // update or add
-          players.set(id, {
-            id, name: d.name || ('P'+id.slice(-4)),
-            color: d.color || '#888',
-            x: d.x || 0, y: d.y || 0,
-            size: d.size || 12,
-            _lastSeenRaw: lastSeenRaw
-          });
-        }
+    startRealtime();
+    joinBtn.disabled = true;
+  });
+
+  // Movement handling
+  window.addEventListener('keydown', (e)=>{
+    if(!client.id) return;
+    const key = e.key;
+    let dx=0, dy=0;
+    if(key==='ArrowUp' || key==='w' || key==='W') dy=-1;
+    if(key==='ArrowDown' || key==='s' || key==='S') dy=1;
+    if(key==='ArrowLeft' || key==='a' || key==='A') dx=-1;
+    if(key==='ArrowRight' || key==='d' || key==='D') dx=1;
+    if(dx||dy){
+      client.x = clamp(client.x+dx,0,COLS-1);
+      client.y = clamp(client.y+dy,0,ROWS-1);
+      // update our player position and claim tile
+      playersRef.doc(client.id).update({x:client.x,y:client.y,ts: firebase.firestore.FieldValue.serverTimestamp()});
+      claimTile(client.x, client.y);
+    }
+  });
+
+  // Claim a tile using a transaction (avoid race conditions)
+  async function claimTile(x,y){
+    const key = `${x}_${y}`;
+    try{
+      await db.runTransaction(async (tx)=>{
+        const doc = await tx.get(tilesDoc);
+        const map = doc.exists ? doc.data().map : {};
+        // write owner to the tile
+        map[key] = {ownerId: client.id, color: client.color, ts: Date.now()};
+        tx.set(tilesDoc, {map});
       });
+    }catch(err){
+      console.warn('claim failed',err);
+    }
+  }
 
-      // Update status
-      statusEl.innerHTML = `<small>Connected. Players: ${players.size}</small>`;
-    }, err => {
-      console.error('onSnapshot error', err);
-      statusEl.innerHTML = `<small style="color:salmon">Realtime error</small>`;
+  // Real-time listeners
+  function startRealtime(){
+    // players list
+    playersRef.onSnapshot(snapshot=>{
+      players = {};
+      snapshot.forEach(d=>{
+        const data = d.data();
+        // ignore stale players (no TTL here, but client removes on unload)
+        players[d.id] = {...data};
+      });
+      renderPlayersList();
+      render();
     });
 
-    // -----------------------
-    // Game loop
-    // -----------------------
-    const now = () => Date.now();
-    let lastFrame = now();
+    // tiles
+    tilesDoc.onSnapshot(doc=>{
+      const data = doc.data();
+      tiles = data && data.map ? data.map : {};
+      render();
+      renderScoreInfo();
+    });
 
-    function gameStep() {
-      const t = now();
-      const dt = (t - lastFrame) / 1000;
-      lastFrame = t;
+    // heartbeat to update timestamp every 8 seconds
+    setInterval(()=>{
+      if(client.id) playersRef.doc(client.id).update({ts: firebase.firestore.FieldValue.serverTimestamp()}).catch(()=>{});
+    },8000);
 
-      // update local velocity from keys
-      const speed = Number(speedSelect.value) || 3;
-      let dx = 0, dy = 0;
-      if (keys['arrowup'] || keys['w']) dy -= 1;
-      if (keys['arrowdown'] || keys['s']) dy += 1;
-      if (keys['arrowleft'] || keys['a']) dx -= 1;
-      if (keys['arrowright'] || keys['d']) dx += 1;
-      // normalize
-      if (dx !== 0 || dy !== 0) {
-        const len = Math.hypot(dx, dy);
-        dx = dx/len; dy = dy/len;
-      }
-      local.vx = dx * speed;
-      local.vy = dy * speed;
+    // remove player on close
+    window.addEventListener('beforeunload', ()=>{
+      if(client.id) playersRef.doc(client.id).delete();
+    });
+  }
 
-      // apply movement
-      local.x += local.vx;
-      local.y += local.vy;
-      // clamp to arena bounds
-      local.x = Math.max(local.size + 4, Math.min(canvas.width - local.size - 4, local.x));
-      local.y = Math.max(local.size + 4, Math.min(canvas.height - local.size - 4, local.y));
-
-      // write to Firestore at a controlled rate
-      writePlayer();
-
-      // draw
-      draw();
-
-      // cleanup stale players every 5s
-      if (Math.floor(t/5000) !== Math.floor((t - dt*1000)/5000)) cleanupStalePlayers();
-
-      requestAnimationFrame(gameStep);
-    }
-
-    function draw() {
-      // clear
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-
-      // draw others
-      for (const [id, p] of players.entries()) {
-        if (id === local.id) continue;
-        drawPlayer(p, false);
-      }
-
-      // draw local (on top)
-      drawPlayer(local, true);
-
-      // draw HUD
-      ctx.fillStyle = 'rgba(255,255,255,0.06)';
-      ctx.fillRect(6,6,220,40);
-      ctx.fillStyle = '#ddd';
-      ctx.font = '14px system-ui';
-      ctx.fillText(`${local.name} (${local.id.slice(-6)})`, 14, 24);
-    }
-
-    function drawPlayer(p, isLocal) {
-      // p might be from Firestore or local
-      const x = p.x, y = p.y, size = p.size || 12;
-      ctx.beginPath();
-      ctx.fillStyle = p.color || '#999';
-      ctx.arc(x, y, size, 0, Math.PI*2);
-      ctx.fill();
-      // name tag
-      ctx.font = (isLocal ? 'bold 13px system-ui' : '12px system-ui');
-      ctx.fillStyle = 'rgba(255,255,255,0.9)';
-      ctx.fillText(p.name || ('P'+p.id.slice(-4)), x - size, y - size - 8);
-    }
-
-    // start loop after ensuring initial write
-    (async () => {
-      // try to read existing doc if present
-      try {
-        const pdocRef = doc(db, 'players', local.id);
-        const snapshot = await getDoc(pdocRef);
-        if (snapshot.exists()) {
-          // pick up previous color/name if found
-          const d = snapshot.data();
-          if (d.color) local.color = d.color;
-          if (d.name) local.name = d.name;
+  // Drawing functions
+  function render(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    // draw tiles
+    for(let y=0;y<ROWS;y++){
+      for(let x=0;x<COLS;x++){
+        const key = `${x}_${y}`;
+        const t = tiles[key];
+        if(t && t.color){
+          ctx.fillStyle = t.color + 'cc'; // semi-transparent
+          ctx.fillRect(1 + x*TILE, 1 + y*TILE, TILE-2, TILE-2);
+        }else{
+          ctx.fillStyle = '#0b1220';
+          ctx.fillRect(1 + x*TILE, 1 + y*TILE, TILE-2, TILE-2);
         }
-      } catch (e) {
-        console.warn('initial doc read error', e);
+        // small grid lines
+        ctx.strokeStyle = '#07182655';
+        ctx.strokeRect(1 + x*TILE, 1 + y*TILE, TILE-2, TILE-2);
       }
+    }
 
-      nameInput.value = local.name;
-      statusEl.innerHTML = `<small>Connected. ID ${local.id}</small>`;
-      // write initial presence and start
-      await writePlayer(true);
+    // draw players
+    Object.keys(players).forEach(pid=>{
+      const p = players[pid];
+      if(!p) return;
+      const px = 1 + p.x * TILE + TILE/2;
+      const py = 1 + p.y * TILE + TILE/2;
+      ctx.beginPath();
+      ctx.fillStyle = p.color || '#fff';
+      ctx.arc(px, py, TILE*0.36, 0, Math.PI*2);
+      ctx.fill();
+      ctx.strokeStyle = '#0008';
+      ctx.stroke();
+      // name
+      ctx.fillStyle = '#eaf6ff';
+      ctx.font = '12px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(p.name || pid, px, py + TILE*0.7);
+    });
+  }
 
-      // start the heartbeat to update lastSeen timestamp every 3s
-      setInterval(() => writePlayer(true), 3000);
+  function renderPlayersList(){
+    playersList.innerHTML = '';
+    Object.keys(players).forEach(pid=>{
+      const p = players[pid];
+      const div = document.createElement('div');
+      div.className = 'player-item';
+      div.innerHTML = `<div class=swatch style="background:${p.color}"></div><div style="flex:1">${p.name || pid}</div><div style="opacity:.8">${p.x},${p.y}</div>`;
+      playersList.appendChild(div);
+    });
+  }
 
-      requestAnimationFrame(gameStep);
-    })();
+  function renderScoreInfo(){
+    // count tiles per player
+    const counts = {};
+    Object.values(tiles).forEach(t=>{
+      if(!t || !t.ownerId) return;
+      counts[t.ownerId] = (counts[t.ownerId]||0) + 1;
+    });
+    // make a small leaderboard
+    const items = Object.keys(counts).map(id=>({id,count:counts[id],name:players[id] ? players[id].name : id, color: (players[id] ? players[id].color : '#888')}));
+    items.sort((a,b)=>b.count-a.count);
+    scoreInfo.innerHTML = '<strong>Top coverage</strong><br>' + items.slice(0,5).map(it=>`<div style="display:flex;align-items:center;gap:8px;margin-top:6px"><div style="width:12px;height:12px;border-radius:3px;background:${it.color}"></div><div style="flex:1">${it.name}</div><div>${it.count}</div></div>`).join('');
+  }
 
-    // Helpful dev function: clear all players (DO NOT call in production)
-    window.__clearPlayers = async () => {
-      const snapshot = await window.firebase && window.firebase.firestore ? null : null;
-      // intentionally left blank: clearing requires admin or manually deleting docs in console
-      console.info('To clear players, delete docs from Firebase console (collection "players").');
-    };
+  // initial render
+  render();
+
   </script>
 </body>
 </html>
